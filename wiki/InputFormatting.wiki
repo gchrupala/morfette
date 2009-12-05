@@ -1,0 +1,36 @@
+#summary Format of training and test data and the lexicon
+#labels format
+
+= Train and test data =
+
+Use one token per line, sentences separated  by blank lines. 
+Token format is whitespace separated list:
+{{{
+FORM LEMMA MORPHO-TAG
+}}}
+
+For example
+
+{{{
+Mais    mais    C_C
+les     le      D_def-mp
+Espagnols       Espagnols       N_P-mp
+ne      ne      ADV_neg
+sont    être    V-indicatifpresent3p
+pas     pas     ADV_neg
+en      en      P
+reste   reste   N_C-ms
+.       .       PONCT_S
+ 
+L'      le      D_def-fs
+agence  agence  N_C-fs
+TBWA    TBWA    N_P-ms
+}}}
+
+
+= Lexicon format =
+
+One entry per line, fields in each entry separated by whitespace.
+{{{
+FORM LEMMA1 MORPHO-TAG1 LEMMA2 MORPHO-TAG2  ...
+}}}
