@@ -29,12 +29,13 @@ theFeatures global tic = let prev = getSome  leftCtx   (left tic)
                 , Sym $ low form ]
           leftFeatures  Nothing                         = [Null , Null , Null]
           focusFeatures (Just (Str form:_))         = [ Sym $ low form 
-                                                      , Sym $ spellingSpec form ]
+                                                      , Sym $ spellingSpec form 
+                                                      , lexmap (low form) ]
                                                       ++ prefixes maxPrefix (low form)
                                                       ++ suffixes maxSuffix (low form)
-          rightFeatures (Just (Str form:_)) = [Sym (low form),trainmap (low form)]
+          rightFeatures (Just (Str form:_)) = [Sym (low form),lexmap (low form)]
           rightFeatures Nothing     = [Null, Null]
           low = lowercase
-          trainmap w = Set $ map (\(l,p,c) -> p) $ Map.findWithDefault [] w (trainLex global)
+          lexmap w = Set $ map (\(l,p,c) -> p) $ Map.findWithDefault [] w (dictLex global)
           getpos Nothing = ""
           getpos (Just (Str form:Str label:_)) = head (splitPOS (lang global) label)
