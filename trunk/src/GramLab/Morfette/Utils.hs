@@ -113,10 +113,14 @@ train (prepr,_) fspecs flags [dat,modeldir] = do
   let langConf = case [f | Lang f <- flags ] of { [] -> "xx" ; [f] -> f }
       lex = Conf { dictLex = dict, trainLex = toksToLexicon toks, lang = langConf }
       mwes = mweSet toks
---      g = case [f | Gaussian f <- flags ] of { [] -> defaultGaussianPrior ; [f] -> f }
+      g = case [f | Gaussian f <- flags ] of { [] -> defaultGaussianPrior ; [f] -> f }
       sentences = toksToSentences prepr toks
   createDirectoryIfMissing True modeldir
-  models <- Models.train (map ($lex) fspecs) sentences
+  models <- Models.train (map (\fs -> let fs' = fs lex
+                                          ts = Models.trainSettings fs'
+                                      in fs' { Models.trainSettings = ts { M.gaussian = g } })
+                          fspecs) 
+            $ sentences
   B.writeFile (modelFile modeldir) (encode models)
   saveConf (confFile modeldir) lex
   saveMwes (mweFile modeldir) mwes
