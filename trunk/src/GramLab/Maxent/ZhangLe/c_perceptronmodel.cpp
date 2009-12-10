@@ -46,30 +46,16 @@ int c_eval_all(C_ZhangLeModel * mv,
     sum += out_probs[l];
   }
   double epsi = 0.0000001;
-  
-  if (abs(sum-1.0) > epsi) { 
-    fprintf(stderr,"Sum = %f\nA = %f\nlog(A) = %f\nmaxv = %f\n"
-	    ,sum,A,log(A),maxv); 
-    for (int l=0;l<out_size;l++) fprintf(stderr,"%f ",x[l]-maxv-log(A));
-    fprintf(stderr,"\n");
-    exit(1);
-  }
+  assert(abs(sum-1.0) < epsi);
   
   delete [] x;
+  // More sanity checking
   int index = 0;
   double value = 0;
   for (int l=0;l<out_size;l++){
     if (out_probs[l]>value){value=out_probs[l];index=out_labels[l];}
   }
-
-  if(out_probs[maxi]!=out_probs[index] ){
-    fprintf(stderr,"maxi=%d index=%d\n",maxi,index);
-    for (int l=0;l<out_size;l++){
-      fprintf(stderr,"label=%d x[l]=%f p=%f\n",out_labels[l],x[l],out_probs[l]);
-    }
-    fprintf(stderr,"\n");
-    exit(1);
-  }
+  assert(out_probs[maxi]==out_probs[index]);
   return out_labels[maxi];
 }
 
@@ -135,9 +121,6 @@ C_ZhangLeModel * c_train_C_ZhangLeModel(int    iter,
     fprintf(stderr,"Iteration %d: ",it);
     fprintf(stderr,"error: %2.4f\n",((double)error)/((double)i));
   }
-  
-
-      
   
   for(int l=0;l < m->labelsize;l++){ 
     for(int j=0;j < m->featsize;j++){
@@ -206,10 +189,8 @@ C_ZhangLeModel * c_load(char * path) {
 	fprintf(stderr,"fscanf failed\n");
 	exit(1);
       }
-      //      fprintf(stderr,"%d %f ",index,val);
       m->params[line][index] = val;
     }
-    // fprintf(stderr,"\n");
   }
   fclose(fh);
   fprintf(stderr,"Loaded labels: %d\n",m->labelsize);
