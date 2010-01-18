@@ -1,0 +1,17 @@
+Name:		morfette-exe
+Version:	0.1
+Synopsis:	Morfette executable (Edit Tree version)
+Description:	Morfette executable (Edit Tree version): tool for supervised learning of morphology
+License:	OtherLicense
+Author:		Grzegorz Chrupała
+Maintainer:	Grzegorz Chrupała <gchrupala@lsv.uni-saarland.de>
+build-type:     Configure
+
+Executable:     morfette
+Main-Is:        Main.hs
+Build-depends:	base, containers, array, QuickCheck, mtl, random,
+		directory, filepath, haskell98, pretty,
+		multiset, utf8-string, bytestring, binary-strict, binary
+C-Sources:      GramLab/Maxent/ZhangLe/c_maxentmodel.cpp
+include-dirs:   GramLab/Maxent/ZhangLe
+extra-libraries:      stdc++ maxent z gfortran m gcc_s
