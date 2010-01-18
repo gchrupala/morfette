@@ -1,27 +1,19 @@
-Morfette 0.1 
+Morfette 0.2
 ============
 
 Grzegorz Chrupała <gchrupala@lsv.uni-saarland.de>
 
 BUILDING INSTRUCTIONS
 =====================
-Currently the build process is pretty rough and is unlikely to work smoothly
-on systems other than Linux.
 
-- Download, build and install the Maximum Entropy Modeling Toolkit, available at
-  http://homepages.inf.ed.ac.uk/s0450736/maxent_toolkit.html
-  You need the library (libmaxent.a) and the header files.
-- If you don't already have it, install the Glasgow Haskell Compiler available at
-  http://www.haskell.org/ghc/
-- Install additional Haskell libraries: multiset, utf8-string, bytestring, 
-  binary-strict and binary. They are all available from 
-  http://hackage.haskell.org/packages/archive/pkg-list.html
-- Configure and build Morfette:
-  You will need to change the settings in morfette-exe.buildinfo to where you 
-  installed the maxent library and headers. You may also need to adjust the 
-  extra-libraries field in morfette-exe.cabal, depending on the version of your 
-  Fortran compiler and libraries. Once you've done that, it's simple:
+You will need the GHC compiler <http://www.haskell.org/ghc/>. Morfette
+depends on the following additional Haskell libraries:
+  - utf8-string: http://hackage.haskell.org/package/utf8-string
+  - binary: http://hackage.haskell.org/package/binary
 
-  > runghc Setup configure --prefix=path/to/install-dir
+Once you have GHC and the libraries, the rest is straightforward. 
+Unpack morfette and run the following commands:
+
+  > runghc Setup configure --prefix=path/to/install-dir 
   > runghc Setup build
   > runghc Setup install
