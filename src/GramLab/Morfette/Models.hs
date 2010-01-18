@@ -15,12 +15,12 @@ import Data.List (sortBy)
 import Data.Ord (comparing)
 import Data.Dynamic
 import GramLab.FeatureSet
-import qualified GramLab.Maxent.ZhangLe.Model as M
+import qualified GramLab.Perceptron.Model as M
 import Data.Traversable (forM)
 import qualified Data.IntMap as IntMap
 import Data.Maybe (fromMaybe)
 import Debug.Trace
-import Data.Binary.Strict
+import Data.Binary
 import Control.Monad (liftM)
 
 data Smth a = Str { str :: String } | ES { es :: a } deriving (Eq,Ord,Show,Read)
@@ -40,12 +40,15 @@ type Model a = LZipper [Smth a] [Smth a] [Smth a] -> ProbDist (Smth a)
 beamSearch :: 
               Int   -- beam size
            -> [Model a]
-           -> ProbDist (LZipper (Tok a) (Tok a) (Tok a)) -- prob dist over sequence of "tokens in context" (as lzippers)
+           -> ProbDist (LZipper (Tok a) (Tok a) (Tok a)) 
+           -- prob dist over sequence of "tokens in context" (as lzippers)
            -> ProbDist [Tok a] -- prob dist over sequences of "tokens"
 beamSearch n cfs pzs =
-    if any (atEnd . fst) pzs  -- of any lzipper at end then get then return tokens
+    if any (atEnd . fst) pzs  
+    -- of any lzipper at end then get then return tokens
     then flip map pzs $ \(z,p) -> (map id (reverse (left z)),p)
-    else -- otherwise apply each classifier in turn in the lzipper seq, prune, adjust probs
+    else -- otherwise apply each classifier in turn in the lzipper seq,
+         -- prune, adjust probs
          let f pzs' model =   prune n 
                               $ flip concatMap pzs'
                                     $ \(z,p) -> flip map (model $ z) 
@@ -81,7 +84,7 @@ train fspecs sents =
  
 
 
-toModelFun :: (Ord a) => FeatureSpec a -> (M.Model (Label a) Int String Double) -> Model a
+toModelFun :: (Ord a,Show a) => FeatureSpec a -> (M.Model (Label a) Int String Double) -> Model a
 toModelFun fs m = 
     \ z -> case preprune fs 
                 .  (\xs -> case filter (check fs z . fst) xs of

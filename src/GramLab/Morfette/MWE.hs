@@ -7,10 +7,10 @@ where
 import GramLab.Utils (join,splitWith,lowercase)
 import GramLab.Morfette.Token
 import qualified Data.List as List
+import qualified Data.Map as Map
 import Data.Ord (comparing)
-import qualified Data.MultiSet as MS
 import Data.Char
-import Data.Binary.Strict
+import Data.Binary
 import qualified Data.ByteString.Lazy as BS
 
 mweSep = '_'
@@ -19,8 +19,9 @@ mweSet :: [Token] -> [[String]]
 mweSet toks = List.sortBy (flip (comparing length))
               . map fst
               . filter ((> 1) . snd)
-              . MS.toOccurList
-              . MS.fromList 
+              . Map.toList
+              . Map.fromListWith (+)
+              . map (\x -> (x,1)) 
               . map (splitWith (==mweSep))
               . filter common
               . map tokenForm $ toks
