@@ -1,4 +1,5 @@
-{-# OPTIONS_GHC -fno-monomorphism-restriction #-}
+{-# LANGUAGE NoMonomorphismRestriction#-} 
+
 module GramLab.Intern ( Table(..)
                       , initial
                       , intern
@@ -15,7 +16,7 @@ import qualified Data.Map as Map
 import Control.Monad.State hiding (mapM)
 import Data.Traversable (mapM)
 
-data Table a = T !Int (Map.Map a Int) deriving (Read,Show)
+data Table a = T !Int (Map.Map a Int) deriving (Eq,Read,Show)
 
 
 
@@ -26,16 +27,16 @@ intern s = do
   (T i m) <- get
   case Map.lookup s m of
     Nothing -> do 
-             put (T (i+1) (Map.insert s (i+1) m))
-             return (i+1)
+             put (T (i+1) (Map.insert s i m))
+             return i
     Just j  -> return  j
 
 internWith hget s = do
   (T i m) <- get
   case Map.lookup s m of
     Nothing -> do 
-      put (T (i+1) (Map.insert s (i+1) m))
-      return (i+1)
+      put (T (i+1) (Map.insert s i m))
+      return i
     Just j  -> return  j
 
 

@@ -5,7 +5,7 @@ module GramLab.Morfette.Utils ( train
                               , morfette
                               )
 where
-import Prelude hiding (getContents,putStrLn,writeFile,readFile)
+import Prelude hiding (print,getContents,putStrLn,putStr,writeFile,readFile)
 import System.IO (stderr,stdout)
 import System.IO.UTF8
 import GramLab.Commands
@@ -27,7 +27,7 @@ import qualified Data.List as List
 import Data.Char
 import GramLab.Morfette.Lang.Conf
 import GramLab.Morfette.BinaryInstances
-import Data.Binary.Strict
+import Data.Binary
 import qualified Data.ByteString.Lazy as B
 import qualified GramLab.Morfette.Config as C
 import GramLab.Morfette.Evaluation
@@ -87,18 +87,26 @@ commands fs fspecs = [
 
 
 predict (_,format) fspecs flags [modelprefix] = do
-  mwes <- loadMwes (mweFile modelprefix)
-  toks <- fmap (getToks flags mwes) getContents
-  lex        <- readConf (confFile modelprefix)
+  hPutStrLn stderr $ "Loading models from " ++ (modelFile modelprefix)
   ms <- fmap decode (B.readFile (modelFile modelprefix))
-  let models = zipWith Models.toModelFun (map ($lex) fspecs) ms
-      sentences = toksToForms toks
-      defaultBeamSize = 3
-      n = case [f | BeamSize f <- flags ] of { [f] -> f ; _ -> defaultBeamSize }
-      predictions = if Pipeline `elem` flags 
-                    then Models.predictPipeline n models sentences
-                    else Models.predict  n models sentences
-  putStrLn (join "\n" (map format predictions))
+  ms == ms `seq` return ()
+  when True $ do
+    mwes <- loadMwes (mweFile modelprefix)
+    lex        <- readConf (confFile modelprefix)
+    txt <- getContents
+    let models = zipWith Models.toModelFun (map ($lex) fspecs) ms
+        defaultBeamSize = 3
+        n = case [f | BeamSize f <- flags ] 
+            of { [f] -> f ; _ -> defaultBeamSize }
+        f = if Pipeline `elem` flags 
+            then Models.predictPipeline
+            else Models.predict
+    putStr . unlines 
+           . map format 
+           . f n models 
+           . toksToForms 
+           . getToks flags mwes
+           $ txt
 
 confFile       dir = dir </> "conf.model"
 mweFile        dir = dir </> "mwe.model" 
@@ -127,7 +135,9 @@ toksToSentences :: (Token -> Models.Tok a) -> [Token] -> [[Models.Tok a]]
 toksToSentences f toks = map (map f)  $ splitWith isNullToken toks
 
 toksToForms :: [Token] -> [[Models.Tok a]]
-toksToForms toks = map (map (\ (f,_,_) ->[Str f]))  $ splitWith isNullToken toks
+toksToForms toks = map (map (\ (f,_,_) ->[Str f])) 
+                   . splitWith isNullToken 
+                   $ toks
 
 parseSents :: String -> [[Models.Tok a]]
 parseSents  = splitWith null . map (map Str) . map words . lines
@@ -142,14 +152,12 @@ getDict flags = do
 
 getToks :: [Flag] -> [[String]] -> String -> [Token]
 getToks flags mwes text = 
-    let ls = lines text
-    in if Tokenize `elem` flags
-          then map parseToken 
-                   . concatMap (detectMwes mwes) 
-                   . List.intersperse [""] 
-                   . map tokenize $ ls 
-       else map parseToken ls
-
+    let f = if Tokenize `elem` flags 
+            then  concatMap (detectMwes mwes) 
+                  . List.intersperse [""] 
+                  . map tokenize 
+            else id
+    in map parseToken . f . lines $ text
              
 
 formatTriple (form,lemma,pos) = unwords . map (padRight ' ' 12) $ [form,lemma,pos] 

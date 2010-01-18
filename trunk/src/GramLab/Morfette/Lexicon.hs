@@ -10,8 +10,8 @@ module GramLab.Morfette.Lexicon ( Lexicon
 where
 import qualified Data.Map as Map
 import qualified GramLab.Data.MultiSet as MS
-import Data.Binary.Strict hiding (decode)
-import qualified Data.Binary.Strict as Binary (decode)
+import Data.Binary hiding (decode)
+import qualified Data.Binary as Binary (decode)
 import qualified Data.ByteString.Lazy as BS
 import Data.Maybe (catMaybes)
 import GramLab.Utils (padRight,splitWith,splitInto,lowercase)

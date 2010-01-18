@@ -4,7 +4,7 @@ import GramLab.Data.Diff.EditListRev
 import GramLab.Data.Diff.EditTree 
 import GramLab.Data.Diff.EditListBidi 
 import qualified GramLab.Data.Diff.EditTree2Rev as ET2R
-import Data.Binary.Strict
+import Data.Binary
 import Control.Monad (liftM,liftM2,liftM3,liftM4)
 instance Binary a => Binary (Edit a) where
     put (Ins c i) = put (0::Word8) >> put c >> put i

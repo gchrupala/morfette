@@ -2,7 +2,7 @@ module GramLab.Morfette.Config ( Config(..)
                                , defaults 
                                )
 where 
-import GramLab.Maxent.ZhangLe.Model
+import GramLab.Perceptron.Model
     
 
 data Config = Config { lemmaConfig   :: TrainSettings
@@ -16,3 +16,4 @@ defaults = Config { lemmaConfig = TrainSettings { iter      = 50
                                               , rate    = 0.1
                                               , occurTh = 40
                                               , entropyTh = 0.0 } }
+                                                

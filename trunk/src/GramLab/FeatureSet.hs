@@ -1,4 +1,9 @@
-{-# OPTIONS_GHC -fglasgow-exts -fno-monomorphism-restriction #-}
+{-# LANGUAGE NoMonomorphismRestriction 
+           , MultiParamTypeClasses 
+           , FunctionalDependencies 
+           , FlexibleContexts 
+           , FlexibleInstances 
+ #-} 
 module GramLab.FeatureSet ( Feature (..)
                           , FeatureSet
                           , toFeatureSet
