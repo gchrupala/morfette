@@ -9,6 +9,8 @@ where
 import Text.PrettyPrint(renderStyle,render,nest,vcat,hsep,style,Mode(..),mode,text,(<>),($$),($+$),(<+>))
 import System.Console.GetOpt
 import System
+import System.IO (stderr)
+import System.IO.UTF8 (hPutStr)
 import qualified Data.List as List
 
 
@@ -36,8 +38,9 @@ runCommand theUsage (CommandSpec command help optDesc argnames) args =
           (_,_,errs) -> theUsage errs
 
 
-usage commands header errs = ioError  (userError (render $     (text "")
-                                                  $$  (vcat (List.map text errs)) $$ (usageMsg commands header)))
+usage commands header errs = hPutStr stderr . render 
+                             $  vcat (List.map text errs)
+                             $$ usageMsg commands header
 
 usageMsg commands header = 
         text header

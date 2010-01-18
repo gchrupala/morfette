@@ -51,7 +51,7 @@ morfette fs fspecs = defaultMain (commands fs fspecs) "Usage: morfette command [
 
 commands fs fspecs = [
              ("train" , CommandSpec (train fs fspecs)
-                          "train maxent model"
+                          "train models"
                           [  Option [] ["dict-file"] (ReqArg DictFile "PATH")
                                        "path to optional dictionary"
                           , Option [] ["language-configuration"] (ReqArg Lang "es|pl|tr|..")
@@ -214,7 +214,8 @@ eval flags [trainf,goldf,testf] = do
   putStrLn $ "Token accuracy unseen:\n" ++ showAccuracy unseen_acc
   when (Map.size dict > 0) 
        (putStrLn $ "Token accuracy unseen train+dict:\n" ++ showAccuracy unseen_train_and_dict_acc)
-  putStrLn $ "Sentence accuracy:\n" ++ showAccuracy sent_acc
+-- FIXME Sentence accuracy is broken
+--  putStrLn $ "Sentence accuracy:\n" ++ showAccuracy sent_acc
   where toks  xs   = filter (not . isNullToken) xs
         sents xs   = splitWith isNullToken xs
     
