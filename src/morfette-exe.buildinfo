@@ -1,3 +1,0 @@
-executable:	morfette
-include-dirs:   /home/gchrupala/include
-extra-lib-dirs: /home/gchrupala/lib
