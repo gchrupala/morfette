@@ -5,13 +5,9 @@ where
 import GramLab.Maxent.ZhangLe.Model
 
 lemmaTrainSettings = TrainSettings { iter      = 50 
-                                   , gaussian  = 1 
-                                   , tolerance = 1e-05 
-                                   , verbose   = True 
-                                   , scale     = False } 
+                                   , occurTh = 40
+                                 , entropyTh = 0.0 }
 posTrainSettings = TrainSettings { iter      = 60 
-                                 , gaussian  = 1 
-                                 , tolerance = 1e-05 
-                                 , verbose   = True 
-                                 , scale     = False } 
+                                 , occurTh = 40
+                                 , entropyTh = 0.0 }
                    

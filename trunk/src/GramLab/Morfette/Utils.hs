@@ -15,8 +15,7 @@ import qualified Data.Set as Set
 import qualified Data.Map as Map
 import Control.Monad hiding (join)
 import GramLab.Utils (padRight,splitWith,splitInto,join,tokenize,lowercase)
-
-import qualified GramLab.Maxent.ZhangLe.Model    as M
+import qualified GramLab.Perceptron.Model as M
 import GramLab.Morfette.Token
 import GramLab.Morfette.LZipper
 import GramLab.Morfette.MWE
@@ -45,6 +44,7 @@ data Flag = ModelPrefix String
           | IgnorePunct
           | IgnorePOS String
           | Pipeline
+          | EntropyTh Double
           deriving Eq
 
 morfette fs fspecs = defaultMain (commands fs fspecs) "Usage: morfette command [OPTION...] [ARG...]"
@@ -56,8 +56,8 @@ commands fs fspecs = [
                                        "path to optional dictionary"
                           , Option [] ["language-configuration"] (ReqArg Lang "es|pl|tr|..")
                                   "language configuration"
-                          , Option [] ["gaussian-prior"] (ReqArg (Gaussian . read) "NUM")
-                                   "gaussian-prior"
+                          , Option [] ["class-entropy-prune-threshold"] (ReqArg (EntropyTh . read) "NUM")
+                                   "class prune threshold"
                           ] 
                           [ "TRAIN-FILE", "MODEL-DIR" ])
               
@@ -67,8 +67,6 @@ commands fs fspecs = [
                                          "beam size to use"
                             , Option [] ["tokenize"] (NoArg Tokenize)
                                          "tokenize input"
-                            , Option [] ["pipeline"] (NoArg Pipeline)
-                                         "use pipeline model"
                             ] 
                             [ "MODEL-DIR" ] )
            , ("eval" , CommandSpec eval 
@@ -113,13 +111,13 @@ train (prepr,_) fspecs flags [dat,modeldir] = do
   let langConf = case [f | Lang f <- flags ] of { [] -> "xx" ; [f] -> f }
       lex = Conf { dictLex = dict, trainLex = toksToLexicon toks, lang = langConf }
       mwes = mweSet toks
-      g = case [f | Gaussian f <- flags ] of { [] -> defaultGaussianPrior ; [f] -> f }
+      g = case [f | EntropyTh f <- flags ] of { [] -> 0.0 ; [f] -> f }
       sentences = toksToSentences prepr toks
   createDirectoryIfMissing True modeldir
-  models <- Models.train (map (\fs -> let fs' = fs lex
-                                          ts = Models.trainSettings fs'
-                                      in fs' { Models.trainSettings = ts { M.gaussian = g } })
-                          fspecs) 
+  let models = Models.train (map (\fs -> let fs' = fs lex
+                                             ts = Models.trainSettings fs'
+                                         in fs' { Models.trainSettings = ts { M.entropyTh = g } })
+                             fspecs) 
             $ sentences
   B.writeFile (modelFile modeldir) (encode models)
   saveConf (confFile modeldir) lex
@@ -156,9 +154,6 @@ getToks flags mwes text =
 
 formatTriple (form,lemma,pos) = unwords . map (padRight ' ' 12) $ [form,lemma,pos] 
 formatToken (f,ml,mp) = unwords [f,fromMaybe "" ml,fromMaybe "" mp]
-
-
-
 
 getEval flags trainf goldf testf = do
   let uncase = if IgnoreCase `elem` flags then

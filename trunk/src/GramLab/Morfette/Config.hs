@@ -8,13 +8,11 @@ import GramLab.Maxent.ZhangLe.Model
 data Config = Config { lemmaConfig   :: TrainSettings
                      , posConfig :: TrainSettings } deriving (Show,Read) 
             
-defaults = Config { lemmaConfig = TrainSettings { iter      = 50 
-                                                , gaussian  = 1 
-                                                , tolerance = 1e-05 
-                                                , verbose   = True 
-                                                , scale     = False } 
+defaults = Config { lemmaConfig = TrainSettings { iter      = 50
+                                                , rate      = 0.1 
+                                                , occurTh   = 40
+                                                , entropyTh = 0.0 } 
                   , posConfig = TrainSettings { iter      = 60 
-                                                  , gaussian  = 1 
-                                                  , tolerance = 1e-05 
-                                                  , verbose   = True 
-                                                  , scale     = False } }
+                                              , rate    = 0.1
+                                              , occurTh = 40
+                                              , entropyTh = 0.0 } }

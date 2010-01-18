@@ -68,23 +68,28 @@ data FeatureSpec a = FS { label    :: Tok a -> Smth a
                         , check    :: LZipper (Tok a) (Tok a) (Tok a) -> Smth a -> Bool 
                         , trainSettings :: M.TrainSettings }
 
-trainFun ::  (Ord a) => [FeatureSpec a] -> [[Tok a]]  -> IO [Model a]
-trainFun fspecs sents = do
-  ms <- train fspecs sents
-  return (zipWith toModelFun fspecs ms) 
+trainFun ::  (Ord a,Show a) => [FeatureSpec a] -> [[Tok a]]  -> [Model a]
+trainFun fspecs sents = 
+  let ms = train fspecs sents
+  in (zipWith toModelFun fspecs ms) 
  
-train :: (Ord a) => [FeatureSpec a] -> [[Tok a]]  -> IO [M.Model (Label a) Int String Double]
-train fspecs sents = do
-  models <- forM fspecs
-                $ \fs -> do { model <- M.train (trainSettings fs) (concatMap (sentToExamples fs) sents)
-                            ; return model }
-  return models
+train :: (Ord a) => [FeatureSpec a] -> [[Tok a]]  -> [M.Model (Label a) Int String Double]
+train fspecs sents = 
+  flip map fspecs
+           $ \fs ->  M.train (trainSettings fs) (concatMap (sentToExamples fs) sents)
+  
  
 
 
 toModelFun :: (Ord a) => FeatureSpec a -> (M.Model (Label a) Int String Double) -> Model a
 toModelFun fs m = 
-    \ z -> preprune fs $ filter (check fs z . fst) $ M.distribution m (features fs z)
+    \ z -> case preprune fs 
+                .  (\xs -> case filter (check fs z . fst) xs of
+                             x:xs' -> x:xs'
+                             [] -> xs)
+                $ M.distribution m (features fs z) of
+             x:xs -> x:xs
+             [] -> error "GramLab.Morfette.Models.toModelFun: unexpected []"
 
 predict :: Int -> [Model a] -> [[Tok a]] -> [[Tok a]]
 predict beamSize models sents = map predictOne sents
