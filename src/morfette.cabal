@@ -4,6 +4,7 @@ Synopsis:	Morfette executable (Edit Tree version)
 Description:	Morfette executable (Edit Tree version): tool for supervised 
 		learning of morphology
 License:	BSD3
+License-file:   LICENSE
 Author:		Grzegorz Chrupała
 Maintainer:	Grzegorz Chrupała <gchrupala@lsv.uni-saarland.de>
 build-type:     Simple
