@@ -1,4 +1,4 @@
-Morfette 0.1 
+Morfette 0.2 
 ============
 
 Grzegorz Chrupała <gchrupala@lsv.uni-saarland.de>
@@ -6,45 +6,50 @@ Grzegorz Chrupała <gchrupala@lsv.uni-saarland.de>
 INTRODUCTION 
 ============
 
-Morfette is a tool for superivised learning of inflectional morphology. The 
-basic approach is described in [1].The system learns to perform joint 
-morphological tagging and lemmatization from morphologically annotated corpora. 
-It is composed of two learning modules which are trained to predict 
-morphological tags and lemmas using the Maximum Entropy classifier. The third 
-module dynamically combines the predictions of the Maximum-Entropy models and 
-outputs a probability distribution over tag-lemma pair sequences. The 
-lemmatization module exploits the idea of recasting lemmatization as a 
-classification task by using class labels which encode mappings from word forms
-to lemmas. 
+Morfette is a tool for superivised learning of inflectional
+morphology. The basic approach is described in [1,2]. The system
+learns to perform joint morphological tagging and lemmatization from
+morphologically annotated corpora.  It is composed of two learning
+modules which are trained to predict morphological tags and lemmas
+using perceptron classifiers. The third module dynamically combines
+the predictions of the models and outputs a probability distribution
+over tag-lemma pair sequences. The lemmatization module exploits the
+idea of recasting lemmatization as a classification task by using
+class labels which encode mappings from word forms to lemmas.  
 
-LICENSE
-=======
-The source code in the src directory is licensed under the LGPL.
+Note that the current version uses perceptron training instead of
+Maxent training.
+
+
+LICENSE 
+======= 
+The source code in the src directory is licensed under
+the BSD license.
 
 INSTALLATION
 ============
-There is a pre-built Linux executable in the bin directory. Just copy it 
-somewhere in your PATH. If it doesn't work on your system you will need to build
- from source, which is non-trivial. Build instructions are in src/INSTALL.
+There is a pre-built Linux executable in the bin directory. Just copy
+it somewhere in your PATH. If it doesn't work on your system you will
+need to build from source, using the GHC Haskell compiler. Build
+instructions are in src/INSTALL.
 
 
 USAGE
 =====
 Usage: morfette command [OPTION...] [ARG...]
-train:    train maxent model
-train [OPTION...] TRAIN-FILE MODEL-DIR
+train:    train models
+train [OPTION...] TRAIN-FILE MODEL-DIR 
     --dict-file=PATH                      path to optional dictionary
     --language-configuration=es|pl|tr|..  language configuration
-    --gaussian-prior=NUM                  gaussian-prior
+    --class-entropy-prune-threshold=NUM   class prune threshold
 
 predict:  predict postags and lemmas using saved model data
-predict [OPTION...] MODEL-DIR
+predict [OPTION...] MODEL-DIR 
     --beam=+INT  beam size to use
     --tokenize   tokenize input
-    --pipeline   use pipeline model
 
 eval:     evaluate morpho-tagging and lemmatization results
-eval [OPTION...] TRAIN-FILE GOLD-FILE TEST-FILE
+eval [OPTION...] TRAIN-FILE GOLD-FILE TEST-FILE 
     --ignore-case            ignore case for evaluation
     --baseline-file=PATH     path to baseline results
     --dict-file=PATH         path to optional dictionary
@@ -61,8 +66,8 @@ morfette predict MODEL-DIR < TEST-DATA > ANALYZED-TEST-DATA
 
 DATA FORMAT:
 
-Morfette expects both training and testing data to be tokenized and split into 
-sentences. The format of training data look like this:
+Morfette expects both training and testing data to be tokenized and
+split into sentences. The format of training data look like this:
 
 Gómez Gómez np0000p
 sostiene sostener vmip3s0
@@ -80,9 +85,10 @@ la el da0fs0
 misma mismo pi0fs000
 
 
-There is one token per line, with three columns separated by spaces or tabs. The
-columns contain word form, lemma and morphological tag respectively. Sentences
-are separated by an empty line. Text should be encoded in UTF-8.
+There is one token per line, with three columns separated by spaces or
+tabs. The columns contain word form, lemma and morphological tag
+respectively. Sentences are separated by an empty line. Text should be
+encoded in UTF-8.
 
 Test data format is similar, except only the first column is needed:
 
@@ -102,21 +108,13 @@ la
 misma
 
 
-DATA
-====
-The data directory contains a model trained on about 168,000 tokens taken from 
-the Spanish Ancora treebank (http://clic.ub.edu/ancora/), with lexicon features 
-extracted from the dictionary from the Spanish Resource Grammar project
-(http://www.upf.edu/pdi/iula/montserrat.marimon/srg.html), which contains over
-556,000 word forms. 
-
-
-
 References:
-[1] Chrupala, G., Dinu, G., and van Genabith, J. (2008). Learning morphology
- with Morfette. In LREC 2008: Proceedings of The Sixth International Conference
- on Language Resources and Evaluation.
- http://www.lrec-conf.org/proceedings/lrec2008/pdf/594_paper.pdf
+[1] Grzegorz Chrupala, Georgiana Dinu and Josef van Genabith. 2008.
+    Learning Morphology with Morfette. In Proceedings of LREC 2008.
+    http://www.lrec-conf.org/proceedings/lrec2008/pdf/594_paper.pdf
 
-
-
+[2] Grzegorz Chrupala. 2008. Towards a Machine-Learning Architecture
+    for Lexical Functional Grammar Parsing. Chapter 6. PhD
+    dissertation, Dublin City
+    University. 
+    http://www.lsv.uni-saarland.de/personalPages/gchrupala/papers/phd.pdf
