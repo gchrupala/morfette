@@ -5,17 +5,16 @@ Grzegorz Chrupała <gchrupala@lsv.uni-saarland.de>
 
 INTRODUCTION 
 ============
-
 Morfette is a tool for superivised learning of inflectional
 morphology. The basic approach is described in [1,2]. The system
 learns to perform joint morphological tagging and lemmatization from
 morphologically annotated corpora.  It is composed of two learning
 modules which are trained to predict morphological tags and lemmas
-using perceptron classifiers. The third module dynamically combines
-the predictions of the models and outputs a probability distribution
-over tag-lemma pair sequences. The lemmatization module exploits the
-idea of recasting lemmatization as a classification task by using
-class labels which encode mappings from word forms to lemmas.  
+using perceptron classifiers. The prediction module dynamically
+combines the output of the learned models and outputs a probability
+distribution over tag-lemma pair sequences. The lemmatization module
+exploits the idea of recasting lemmatization as a classification task
+by using class labels which encode mappings from word forms to lemmas.
 
 Note that the current version uses perceptron training instead of
 Maxent training.

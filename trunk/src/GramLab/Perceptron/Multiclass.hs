@@ -152,6 +152,9 @@ finalParams (c,params,params_a) = do
 
 m `at` i = Map.findWithDefault 0 i m
         
+counts_x :: [(X,Y)] -> (Map.Map (I,Y) Int
+                       ,Map.Map I Int
+                       ,Map.Map Y Int)
 counts_x xys = foldl' f (Map.empty,Map.empty,Map.empty) xys
     where f (!cxy,!cx,!cy) (!x,!y) = 
               ( foldl' (\z (i,_) -> Map.insertWith' (+) (i,y) 1 z) cxy x
@@ -164,14 +167,16 @@ product = foldl' (*) 1
 
 uniq = Set.toList . Set.fromList
 
+entropyRanking :: Int -> [(X,Y)] -> [(I,Double,[Y])]
 entropyRanking freqth xys = 
     let (!cxy,!cx,!cy) = counts_x xys
-        n =  sum . Map.elems $ cy 
+        n =  sum . map fromIntegral . Map.elems $ cy 
         ys_x x = map (\((_,y),c) -> (y,c))
                . filter (\((x',_),c) -> x == x') 
                . Map.toList 
                $ cxy
-    in [ let ys = ys_x x in (x,entropy . map snd $ ys,map fst ys) 
+    in [ let ys = ys_x x in (x,entropy . map (fromIntegral . snd) 
+                                  $ ys,map fst ys) 
                 | x <-    Map.keys 
                         . Map.filter (>freqth)
                         $ cx ]
@@ -181,9 +186,12 @@ entropy xs =
     let n = sum xs
     in negate . sum $ [ if x == 0 then 0 else x/n * logBase 2 (x/n) | x <- xs ]
 
-makeFeatDict th1 th2 xys = 
-    Map.fromList 
-    . map (\r@(x,s,ys) -> {- trace (show r) $ -} (x,ys))
-    . filter (\(x,s,ys) -> s < th2)
-    . entropyRanking th1
-    $ xys
+makeFeatDict :: Int -> Double -> [(X, Y)] -> Map.Map I [Y]
+makeFeatDict th1 th2 = 
+    if th2 <= 0.0 
+    then const Map.empty 
+    else Map.fromList 
+             . map (\r@(x,s,ys) -> (x,ys))
+             . filter (\(x,s,ys) -> s < th2)
+             . entropyRanking th1
+             
