@@ -119,6 +119,7 @@ train ::    Logger X Y
 train logger th1 th2 rate epochs bounds ss =  MC m d
   where d = makeFeatDict th1 th2  ss
         m = d == d `seq` runSTUArray $ do
+              trace (show bounds) () `seq` return ()
               let ((lo,_),(hi,_)) = bounds
                   ys = [lo..hi]
               params <- newArray bounds 0

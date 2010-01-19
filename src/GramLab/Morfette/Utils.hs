@@ -31,6 +31,7 @@ import Data.Binary
 import qualified Data.ByteString.Lazy as B
 import qualified GramLab.Morfette.Config as C
 import GramLab.Morfette.Evaluation
+import GramLab.Morfette.Settings.Defaults
 
 data Flag = ModelPrefix String
           | Eval
@@ -45,6 +46,8 @@ data Flag = ModelPrefix String
           | IgnorePOS String
           | Pipeline
           | EntropyTh Double
+          | IterPOS Int
+          | IterLemma Int
           deriving Eq
 
 morfette fs fspecs = defaultMain (commands fs fspecs) "Usage: morfette command [OPTION...] [ARG...]"
@@ -52,34 +55,50 @@ morfette fs fspecs = defaultMain (commands fs fspecs) "Usage: morfette command [
 commands fs fspecs = [
              ("train" , CommandSpec (train fs fspecs)
                           "train models"
-                          [  Option [] ["dict-file"] (ReqArg DictFile "PATH")
+                          [ Option [] ["dict-file"] 
+                                       (ReqArg DictFile "PATH")
                                        "path to optional dictionary"
-                          , Option [] ["language-configuration"] (ReqArg Lang "es|pl|tr|..")
-                                  "language configuration"
-                          , Option [] ["class-entropy-prune-threshold"] (ReqArg (EntropyTh . read) "NUM")
-                                   "class prune threshold"
+                          , Option [] ["language-configuration"] 
+                                       (ReqArg Lang "es|pl|tr|..")
+                                       "language configuration"
+                          , Option [] ["class-entropy-prune-threshold"] 
+                                       (ReqArg (EntropyTh . read) "NUM")
+                                       "class prune threshold"
+                          , Option [] ["iter-pos"] 
+                                       (ReqArg (IterPOS . read) "NUM")
+                                       "iterations for POS model"
+                          , Option [] ["iter-lemma"] 
+                                       (ReqArg (IterLemma . read) "NUM")
+                                       "iterations for Lemma model"
                           ] 
-                          [ "TRAIN-FILE", "MODEL-DIR" ])
+              [ "TRAIN-FILE", "MODEL-DIR" ])
               
            , ("predict" , CommandSpec (predict fs fspecs)
                             "predict postags and lemmas using saved model data"
-                            [ Option [] ["beam"]   (ReqArg (BeamSize . read) "+INT")
+                            [ Option [] ["beam"]   
+                                         (ReqArg (BeamSize . read) "+INT")
                                          "beam size to use"
-                            , Option [] ["tokenize"] (NoArg Tokenize)
+                            , Option [] ["tokenize"] 
+                                         (NoArg Tokenize)
                                          "tokenize input"
                             ] 
                             [ "MODEL-DIR" ] )
            , ("eval" , CommandSpec eval 
                           "evaluate morpho-tagging and lemmatization results"
-                          [ Option [] ["ignore-case"] (NoArg IgnoreCase)
+                          [ Option [] ["ignore-case"] 
+                                       (NoArg IgnoreCase)
                                        "ignore case for evaluation"
-                          , Option [] ["baseline-file"] (ReqArg BaselineFile "PATH")
+                          , Option [] ["baseline-file"] 
+                                       (ReqArg BaselineFile "PATH")
                                       "path to baseline results"
-                          , Option [] ["dict-file"] (ReqArg DictFile "PATH")
+                          , Option [] ["dict-file"] 
+                                       (ReqArg DictFile "PATH")
                                        "path to optional dictionary"
-                          , Option [] ["ignore-punctuation"] (NoArg IgnorePunct)
+                          , Option [] ["ignore-punctuation"] 
+                                       (NoArg IgnorePunct)
                                        "ignore punctuation for evaluation"
-                          , Option [] ["ignore-pos"] (ReqArg IgnorePOS "POS-prefix")
+                          , Option [] ["ignore-pos"] 
+                                       (ReqArg IgnorePOS "POS-prefix")
                                        "ignore POS starting with POS-prefix for evaluation"
                           ]
                           ["TRAIN-FILE","GOLD-FILE","TEST-FILE"])
@@ -117,15 +136,29 @@ train (prepr,_) fspecs flags [dat,modeldir] = do
   toks <- fmap (map parseToken . lines) (readFile dat)
   dict <- getDict flags        
   let langConf = case [f | Lang f <- flags ] of { [] -> "xx" ; [f] -> f }
-      lex = Conf { dictLex = dict, trainLex = toksToLexicon toks, lang = langConf }
+      lex = Conf { dictLex = dict
+                 , trainLex = toksToLexicon toks
+                 , lang = langConf }
       mwes = mweSet toks
-      g = case [f | EntropyTh f <- flags ] of { [] -> 0.0 ; [f] -> f }
+      g = case [f | EntropyTh f <- flags ] of 
+            [] -> M.entropyTh posTrainSettings  
+            [f] -> f 
+      i_p = case [f | IterPOS f <- flags ] of  
+              [] ->  M.iter posTrainSettings 
+              [f] -> f 
+      i_l = case [f | IterLemma f <- flags ] of  
+              [] ->  M.iter lemmaTrainSettings 
+              [f] -> f 
       sentences = toksToSentences prepr toks
   createDirectoryIfMissing True modeldir
-  let models = Models.train (map (\fs -> let fs' = fs lex
-                                             ts = Models.trainSettings fs'
-                                         in fs' { Models.trainSettings = ts { M.entropyTh = g } })
-                             fspecs) 
+  let models = Models.train (map (\(i,fs) -> 
+                                      let fs' = fs lex
+                                          ts = Models.trainSettings fs'
+                                      in fs' { Models.trainSettings = 
+                                                   ts { M.entropyTh = g 
+                                                      , M.iter = i
+                                                      } })
+                             $ zip [i_p,i_l] fspecs) 
             $ sentences
   B.writeFile (modelFile modeldir) (encode models)
   saveConf (confFile modeldir) lex
