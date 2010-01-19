@@ -21,7 +21,6 @@ import Data.Ord (comparing)
 
 data Feature sym num = Sym sym
                      | Set [sym]
-                     | Map [(sym,num)]
                      | Num num
                      | Null
                        deriving (Show,Read,Eq,Ord)
@@ -55,10 +54,5 @@ realFeature k (Sym s)  = intern (k,Just s)  >>= \i -> return $ [(i,1)]
 realFeature k (Num n)  = intern (k,Nothing) >>= \i -> return $ [(i,n)]
 realFeature k (Set ss) = mapM intern (zip (repeat k) (map Just (uniq ss))) 
                          >>= \is -> return $ zip is (repeat 1)
-realFeature k (Map ss) = flip mapM (zip (repeat k) ss) $ \(k,(s,v)) -> do
-                                      i <- intern (k,Just s)
-                                      return (i,v)
-
-
 {-# SPECIALIZE INLINE uniq :: [String] -> [String] #-}
 uniq = Set.toList . Set.fromList 
