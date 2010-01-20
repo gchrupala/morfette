@@ -2,7 +2,6 @@ module GramLab.Perceptron.IntModel ( IntModel
                                    , train
                                    , evalAll
                                    , TrainSettings(..)
-                                   , trainSettings
                                    )
 
 where
@@ -30,8 +29,6 @@ data TrainSettings = TrainSettings { iter      :: Int
 instance B.Binary TrainSettings where
     put (TrainSettings a b c d) = B.put a >> B.put b >> B.put c >> B.put d
     get = return TrainSettings `ap` B.get `ap` B.get `ap` B.get `ap` B.get
-
-trainSettings = TrainSettings 30 0.1 40 0.0
 
 data IntModel = IntModel  { modelLabels   :: IntSet.IntSet 
                           , modelWeights  :: P.Model } 

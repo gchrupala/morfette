@@ -4,7 +4,6 @@ module GramLab.Perceptron.Model ( train
                                     , classify
                                     , save
                                     , load
-                                    , I.trainSettings
                                     , I.TrainSettings(..)
                                     , Model(..)
                                     , ModelData(..)
@@ -46,12 +45,12 @@ train p examples = Model { model       = m
                          , modelData   = 
                              ModelData { featureMap  = fm 
                                        , settings    = p   
-                                       , inverseClassMap   = 
-                                         invertMap $ let (T _ icm) = cm   in icm
+                                       , inverseClassMap = invertMap $ 
+                                                           let (T _ icm) = cm   
+                                                           in icm
                                        }}
   where m = I.train p samples
-        (ks,xs)       = unzip 
-                        $ examples
+        (ks,xs)       = unzip examples
         (labels,cm)   = runState (mapM intern ks)       initial
         (featsets,fm) = runState (mapM toFeatureSet xs) initial
         samples       = zipWith (\l fs -> (l,IntMap.toList fs)) 
