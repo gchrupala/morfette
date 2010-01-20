@@ -24,9 +24,9 @@ import qualified Data.Set as Set
 import Data.Map ((!))
 import Data.Maybe (isJust,fromMaybe)
 import GramLab.Utils (uniq)
-import Text.Printf (printf)
 import Debug.Trace 
 
+type Logger x y = Int -> ([y] -> x -> y) -> String
 newtype Model = MC { weights :: DenseVector (Y,I)
                    } deriving (Eq,Show)
 
@@ -56,17 +56,7 @@ phi x y = (x,y)
 decode :: Model -> [Y] -> X -> Y
 decode (MC w) ys x = snd . maximum 
                        $ [ (w`dot`phi x y,y) | y <- ys ]
-
-{-# INLINE decode_ #-}
-decode_ :: (STRef s Int, DenseVectorST s (Y,I), DenseVectorST s (Y,I)) 
-           -> [Y]
-           -> X
-           -> ST s Y
-decode_ w ys x =   fmap (snd . maximum)  
-                 $ mapM (\y -> do { r <- w`dot_`phi x y ; return (r,y) } )
-                 $ ys
-
-
+    
 {-# INLINE softmax #-}
 {-# SPECIALIZE softmax :: [Float] -> [Float] #-}
 softmax x = 
@@ -100,7 +90,8 @@ iter rate yss ss (c,params,params_a) = do
         params_a `plus_` (phi_xy' `scale` (rate * (-1) * fromIntegral c'))
       modifySTRef c (+1)
 
-train ::    Int 
+train ::    Logger X Y 
+         -> Int 
          -> Double
          -> Float
          -> Int
@@ -108,40 +99,38 @@ train ::    Int
          -> [[Y]]
          -> [(X, Y)]
          -> Model
-train th1 th2 rate epochs bounds yss xys =  MC m
+train logger th1 th2 rate epochs bounds yss ss =  MC m
   where m = runSTUArray $ do
               trace (show bounds) () `seq` return ()
+              let ((lo,_),(hi,_)) = bounds
+                  ys = [lo..hi]
               params <- newArray bounds 0
               params_a <- newArray bounds 0
               c <- newSTRef 1
               for_ [1..epochs] $ 
-                       \i -> do iter rate yss xys (c,params,params_a)
-                                corr <- fmap sum 
-                                        . flip mapM (zip yss xys)
-                                        $ \(ys,(x,y)) -> do 
-                                          y'<- decode_ (c,params,params_a) ys x 
-                                          return . fromEnum $ y' /= y
-                                let err :: Double
-                                    err = fromIntegral corr / 
-                                          fromIntegral (length xys)
+                       \i -> do iter rate yss ss (c,params,params_a)
+                                ps <- finalParams (c,params,params_a)
+                                ps' <- unsafeFreeze ps
                                 runLogger 
-                                  $ hPutStrLn stderr
-                                  $ printf "Iteration %d: error: %2.4f" i err 
-              finalParams (c, params,  params_a)
-              return params
+                                 $ hPutStrLn stderr (logger i $ decode (MC ps'))
+              final <- finalParams (c, params,  params_a)
+              return final
+
+runLogger f = unsafeIOToST f
 
 finalParams :: (STRef s Int, DenseVectorST s (Y,I), DenseVectorST s (Y,I))
-            -> ST s ()
+            -> ST s (DenseVectorST s (Y,I))
 finalParams (c,params,params_a) = do
   (l,u) <- getBounds params
+  out <- newArray (l,u) 0
   c' <- fmap fromIntegral (readSTRef c)
   for_ (range (l,u)) $ \i -> do
       e   <- readArray params   i
       e_a <- readArray params_a i
-      writeArray params i (e - (e_a * (1/c')))
+      writeArray out i (e - (e_a * (1/c')))
+  return out
 
-{-# NOINLINE runLogger #-}
-runLogger f = unsafeIOToST f
+
 
 m `at` i = Map.findWithDefault 0 i m
         
@@ -154,7 +143,35 @@ counts_x xys = foldl' f (Map.empty,Map.empty,Map.empty) xys
               , foldl' (\z (i,_) -> Map.insertWith' (+) i 1 z) cx x
               , Map.insertWith' (+) y 1 cy )
 
-sum :: (Num n) => [n] -> n
-{-# SPECIALIZE INLINE sum :: [Double] -> Double  #-}
-{-# SPECIALIZE INLINE sum :: [Float] -> Float  #-}
+sum :: [Double] -> Double                                    
 sum = foldl' (+) 0
+product = foldl' (*) 1
+
+entropyRanking :: Int -> [(X,Y)] -> [(I,Double,[Y])]
+entropyRanking freqth xys = 
+    let (!cxy,!cx,!cy) = counts_x xys
+        n =  sum . map fromIntegral . Map.elems $ cy 
+        ys_x x = map (\((_,y),c) -> (y,c))
+               . filter (\((x',_),c) -> x == x') 
+               . Map.toList 
+               $ cxy
+    in [ let ys = ys_x x in (x,entropy . map (fromIntegral . snd) 
+                                  $ ys,map fst ys) 
+                | x <-    Map.keys 
+                        . Map.filter (>freqth)
+                        $ cx ]
+
+entropy :: [Double] -> Double
+entropy xs = 
+    let n = sum xs
+    in negate . sum $ [ if x == 0 then 0 else x/n * logBase 2 (x/n) | x <- xs ]
+
+makeFeatDict :: Int -> Double -> [(X, Y)] -> Map.Map I [Y]
+makeFeatDict th1 th2 = 
+    if th2 <= 0.0 
+    then const Map.empty 
+    else Map.fromList 
+             . map (\r@(x,s,ys) -> (x,ys))
+             . filter (\(x,s,ys) -> s < th2)
+             . entropyRanking th1
+             
