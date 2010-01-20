@@ -61,9 +61,6 @@ commands fs fspecs = [
                           , Option [] ["language-configuration"] 
                                        (ReqArg Lang "es|pl|tr|..")
                                        "language configuration"
-                          , Option [] ["class-entropy-prune-threshold"] 
-                                       (ReqArg (EntropyTh . read) "NUM")
-                                       "class prune threshold"
                           , Option [] ["iter-pos"] 
                                        (ReqArg (IterPOS . read) "NUM")
                                        "iterations for POS model"

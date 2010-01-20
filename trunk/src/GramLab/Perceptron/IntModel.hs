@@ -67,7 +67,7 @@ evalAll m ys fs =
     let ((_,lo),(_,hi)) = P.bounds . modelWeights $ m
         fs' = filter (\(k,_) -> inRange (lo,hi) k) fs
     in map (\(i,v) -> (i,realToFrac v)) 
-                      . P.distribution ys (modelWeights m)
+                      . P.distribution (modelWeights m) ys
                       $ [ (i,realToFrac v) | (i,v) <- fs' ]
 instance B.Binary IntModel where
     put (IntModel ls ws)  = B.put ls >> B.put ws
