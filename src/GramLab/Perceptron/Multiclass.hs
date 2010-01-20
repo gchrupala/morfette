@@ -27,28 +27,22 @@ import GramLab.Utils (uniq)
 import Debug.Trace 
 
 type Logger x y = Int -> ([y] -> x -> y) -> String
-data Model = MC { weights :: DenseVector (Y,I)
-                , dict ::  Map.Map I [Y]
-                } deriving (Eq,Show)
+newtype Model = MC { weights :: DenseVector (Y,I)
+                   } deriving (Eq,Show)
 
 bounds = A.bounds . weights
 
 instance B.Binary Model where
-    put (MC m d) = do
+    put (MC m) = do
         let (lo,hi) = A.bounds m
             xs = filter (\(_,e) -> e /= 0.0) . A.assocs $ m
         B.put (lo,hi)
         B.put xs
-  --      trace (show $ d) () `seq` return ()
-        B.put d
     get = do
       (lo,hi) <- B.get
       xs <- B.get
       xs == xs `seq` return ()
-      d <- B.get
-      d == d `seq` return ()
---      trace (show $ d) () `seq` return ()
-      return $ MC (A.accumArray (+) 0 (lo,hi) $ xs) d
+      return $ MC (A.accumArray (+) 0 (lo,hi) $ xs)
 
 type Y = Int
 type X = [(I,Float)]
@@ -60,15 +54,9 @@ phi x y = (x,y)
 
 {-# INLINE decode #-}
 decode :: Model -> [Y] -> X -> Y
-decode (MC w d) ys x = snd . maximum 
-                       $ [ (w`dot`phi x y,y) | y <- fromMaybe ys $ select d x ]
+decode (MC w) ys x = snd . maximum 
+                       $ [ (w`dot`phi x y,y) | y <- ys ]
     
-{- INLINE select #-}
-select :: Map.Map I [Y] -> X -> Maybe [Y]
-select d x = case filter isJust [ Map.lookup x_i d | (x_i,_) <- x ] of
-               r:_ -> r
-               [] -> Nothing
-              
 {-# INLINE softmax #-}
 {-# SPECIALIZE softmax :: [Float] -> [Float] #-}
 softmax x = 
@@ -77,29 +65,21 @@ softmax x =
     in  [ exp $ x_i - x_max - log a | !x_i <- x ]
 
 {-# INLINE distribution #-}
-distribution ::  [Y] -> Model -> X -> [(Y, Float)]
-distribution yss (MC w d) x = 
+distribution ::  Model -> [Y] -> X -> [(Y, Float)]
+distribution (MC w) ys x = 
     let swap (!x,!y) = (y,x)
-        merge yxs = map (\y -> (y,fromMaybe 0 (lookup y yxs))) yss
-    in reverse . map swap . sort $
-       case select d x of
-         Just ys -> let fxs = map ((w`dot`) . phi x) ys
-                    in --map swap . merge $ zip ys (softmax fxs)
-                       zip (softmax fxs) ys
-         Nothing -> let fxs = map ((w`dot`) . phi x) yss
-                    in zip (softmax fxs) yss
+        fxs = map ((w`dot`) . phi x) ys
+    in reverse . map swap . sort $ zip (softmax fxs) ys
 
-iter ::    Map.Map I [Y]
-        -> Float
-        -> [Y]
+iter ::    Float
         -> [[Y]]
         -> [(X, Y)]
         -> (STRef s Int, DenseVectorST s (Y,I), DenseVectorST s (Y,I))
         -> ST s ()
-iter d rate ys yss ss (c,params,params_a) = do
+iter rate yss ss (c,params,params_a) = do
     for_ (zip yss ss) $ \ (ys',(x,y)) -> do
       params' <- unsafeFreeze params
-      let y'= decode (MC params' d) ys' x
+      let y'= decode (MC params') ys' x
           phi_xy = phi x y
           phi_xy' = phi x y'
       when (y' /= y) $ do 
@@ -119,9 +99,8 @@ train ::    Logger X Y
          -> [[Y]]
          -> [(X, Y)]
          -> Model
-train logger th1 th2 rate epochs bounds yss ss =  MC m d
-  where d = makeFeatDict th1 th2  ss
-        m = d == d `seq` runSTUArray $ do
+train logger th1 th2 rate epochs bounds yss ss =  MC m
+  where m = runSTUArray $ do
               trace (show bounds) () `seq` return ()
               let ((lo,_),(hi,_)) = bounds
                   ys = [lo..hi]
@@ -129,11 +108,11 @@ train logger th1 th2 rate epochs bounds yss ss =  MC m d
               params_a <- newArray bounds 0
               c <- newSTRef 1
               for_ [1..epochs] $ 
-                       \i -> do iter d rate ys yss ss (c,params,params_a)
+                       \i -> do iter rate yss ss (c,params,params_a)
                                 ps <- finalParams (c,params,params_a)
                                 ps' <- unsafeFreeze ps
                                 runLogger 
-                                 $ hPutStrLn stderr (logger i $ decode (MC ps' d))
+                                 $ hPutStrLn stderr (logger i $ decode (MC ps'))
               final <- finalParams (c, params,  params_a)
               return final
 
