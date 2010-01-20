@@ -32,6 +32,7 @@ type Example label features = (label,features)
 data ModelData lab key sym num = 
     ModelData { featureMap :: Table (key,Maybe sym) 
               , settings   :: I.TrainSettings 
+              , classMap   :: Map.Map lab Int
               , inverseClassMap   :: IntMap.IntMap lab
               } deriving (Eq,Show)
 data Model lab key sym num = Model { model      :: I.IntModel
@@ -41,20 +42,25 @@ data Model lab key sym num = Model { model      :: I.IntModel
 invertMap = Map.foldWithKey (\k v m' -> IntMap.insert v k m') IntMap.empty
 maxValues = IntMap.unionsWith max
 
-train p examples = Model { model       = m 
-                         , modelData   = 
-                             ModelData { featureMap  = fm 
-                                       , settings    = p   
-                                       , inverseClassMap = invertMap $ 
-                                                           let (T _ icm) = cm   
-                                                           in icm
-                                       }}
-  where m = I.train p samples
-        (ks,xs)       = unzip examples
-        (labels,cm)   = runState (mapM intern ks)       initial
-        (featsets,fm) = runState (mapM toFeatureSet xs) initial
-        samples       = zipWith (\l fs -> (l,IntMap.toList fs)) 
-                                labels 
+train :: (FeatureSet b key sym Double, Ord key, Ord sym, Ord a) =>
+         I.TrainSettings 
+      -> [[a]]
+      -> [(a, b)] 
+      -> Model a key sym num
+train p yss examples = 
+    Model { model       = m 
+          , modelData   = 
+              ModelData { featureMap  = fm 
+                        , settings    = p   
+                        , classMap    = cm
+                        , inverseClassMap = invertMap cm
+                        }}
+  where m = I.train p (map (map (cm !)) yss) samples
+        (ys,xs)    = unzip examples
+        (ys',T _ cm)   = flip runState initial $ mapM intern ys
+        (featsets,fm)  = runState (mapM toFeatureSet xs) initial
+        samples        = zipWith (\l fs -> (l,IntMap.toList fs)) 
+                                ys'
                                 featsets
 
 pruneSingletonLabels :: (Ord y) => [(y,a)] -> [(y,a)]
@@ -114,8 +120,9 @@ dumpMapping h dm examples = do
     _       -> return ()
 
 
-distribution m fs = fromAssoc $ map (\(k,v) -> (origClass k,v)) dist
-    where dist    = I.evalAll (model m) s
+distribution m ys fs = fromAssoc $ map (\(k,v) -> (origClass k,v)) dist
+    where dist    = I.evalAll (model m) (map (cm!) ys) s
+          cm      = classMap . modelData $ m
           s       = IntMap.toList feats
           feats   = evalState (toFeatureSet fs) (featureMap . modelData $ m)
           origClass k  = 
@@ -125,7 +132,7 @@ distribution m fs = fromAssoc $ map (\(k,v) -> (origClass k,v)) dist
                             $ "GramLab.Perceptron.Model.distribution: "
                              ++ "key not found: " ++ show k 
 
-classify m = fst . head . distribution m 
+classify m ys = fst . head . distribution m ys
 
 instance (Ord a, B.Binary a) => B.Binary (Table a) where
     put (T i m) = B.put i >> B.put m
@@ -136,18 +143,21 @@ instance (Ord lab, Ord key, Ord sym,
           B.Binary key, 
           B.Binary sym, 
           B.Binary num) => B.Binary (ModelData lab key sym num) where
-    put (ModelData fm s icm) = do
+    put (ModelData fm s cm icm) = do
       B.put fm 
       B.put s  
+      B.put cm
       B.put icm
     get = do 
       fm <- B.get
       fm == fm `seq` return ()
       s <- B.get 
       s == s `seq` return ()
+      cm <- B.get 
+      cm == cm `seq` return ()
       icm <- B.get
       icm == icm `seq` return ()
-      return $ ModelData fm s icm
+      return $ ModelData fm s cm icm
 
 instance (Ord lab, Ord key, Ord sym,
           B.Binary lab, 

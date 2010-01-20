@@ -23,9 +23,10 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Map ((!))
 import Data.Maybe (isJust,fromMaybe)
+import GramLab.Utils (uniq)
 import Debug.Trace 
 
-type Logger x y = Int -> (x -> y) -> String
+type Logger x y = Int -> ([y] -> x -> y) -> String
 data Model = MC { weights :: DenseVector (Y,I)
                 , dict ::  Map.Map I [Y]
                 } deriving (Eq,Show)
@@ -58,8 +59,8 @@ phi :: X -> Y -> (X,Y)
 phi x y = (x,y)
 
 {-# INLINE decode #-}
-decode :: [Y] -> Model -> X -> Y
-decode ys (MC w d) x = snd . maximum 
+decode :: Model -> [Y] -> X -> Y
+decode (MC w d) ys x = snd . maximum 
                        $ [ (w`dot`phi x y,y) | y <- fromMaybe ys $ select d x ]
     
 {- INLINE select #-}
@@ -76,7 +77,7 @@ softmax x =
     in  [ exp $ x_i - x_max - log a | !x_i <- x ]
 
 {-# INLINE distribution #-}
-distribution :: [Y] -> Model -> X -> [(Y, Float)]
+distribution ::  [Y] -> Model -> X -> [(Y, Float)]
 distribution yss (MC w d) x = 
     let swap (!x,!y) = (y,x)
         merge yxs = map (\y -> (y,fromMaybe 0 (lookup y yxs))) yss
@@ -89,15 +90,16 @@ distribution yss (MC w d) x =
                     in zip (softmax fxs) yss
 
 iter ::    Map.Map I [Y]
-        -> [Y]
         -> Float
+        -> [Y]
+        -> [[Y]]
         -> [(X, Y)]
         -> (STRef s Int, DenseVectorST s (Y,I), DenseVectorST s (Y,I))
         -> ST s ()
-iter d ys rate ss (c,params,params_a) = do
-    for_ ss $ \ (x,y) -> do
+iter d rate ys yss ss (c,params,params_a) = do
+    for_ (zip yss ss) $ \ (ys',(x,y)) -> do
       params' <- unsafeFreeze params
-      let y'= decode ys (MC params' d) x
+      let y'= decode (MC params' d) ys' x
           phi_xy = phi x y
           phi_xy' = phi x y'
       when (y' /= y) $ do 
@@ -114,9 +116,10 @@ train ::    Logger X Y
          -> Float
          -> Int
          -> ((Y,I), (Y,I))
+         -> [[Y]]
          -> [(X, Y)]
          -> Model
-train logger th1 th2 rate epochs bounds ss =  MC m d
+train logger th1 th2 rate epochs bounds yss ss =  MC m d
   where d = makeFeatDict th1 th2  ss
         m = d == d `seq` runSTUArray $ do
               trace (show bounds) () `seq` return ()
@@ -126,12 +129,11 @@ train logger th1 th2 rate epochs bounds ss =  MC m d
               params_a <- newArray bounds 0
               c <- newSTRef 1
               for_ [1..epochs] $ 
-                       \i -> do iter d ys rate ss (c,params,params_a)
+                       \i -> do iter d rate ys yss ss (c,params,params_a)
                                 ps <- finalParams (c,params,params_a)
                                 ps' <- unsafeFreeze ps
                                 runLogger 
-                                 $ hPutStrLn stderr (logger i 
-                                                    $ decode ys (MC ps' d))
+                                 $ hPutStrLn stderr (logger i $ decode (MC ps' d))
               final <- finalParams (c, params,  params_a)
               return final
 
@@ -165,8 +167,6 @@ counts_x xys = foldl' f (Map.empty,Map.empty,Map.empty) xys
 sum :: [Double] -> Double                                    
 sum = foldl' (+) 0
 product = foldl' (*) 1
-
-uniq = Set.toList . Set.fromList
 
 entropyRanking :: Int -> [(X,Y)] -> [(I,Double,[Y])]
 entropyRanking freqth xys = 

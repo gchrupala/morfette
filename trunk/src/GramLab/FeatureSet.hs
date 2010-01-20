@@ -52,7 +52,5 @@ listToFeatureSet = assocListToFeatureSet . Utils.index
 realFeature k Null     = return []
 realFeature k (Sym s)  = intern (k,Just s)  >>= \i -> return $ [(i,1)]
 realFeature k (Num n)  = intern (k,Nothing) >>= \i -> return $ [(i,n)]
-realFeature k (Set ss) = mapM intern (zip (repeat k) (map Just (uniq ss))) 
+realFeature k (Set ss) = mapM intern (zip (repeat k) (map Just (Utils.uniq ss))) 
                          >>= \is -> return $ zip is (repeat 1)
-{-# SPECIALIZE INLINE uniq :: [String] -> [String] #-}
-uniq = Set.toList . Set.fromList 

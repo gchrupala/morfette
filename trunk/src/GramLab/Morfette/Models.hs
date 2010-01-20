@@ -10,7 +10,8 @@ module GramLab.Morfette.Models ( train
                                )
 where
 import GramLab.Morfette.LZipper
-
+import qualified Data.Map as Map
+import Data.Map ((!))
 import Data.List (sortBy)
 import Data.Ord (comparing)
 import Data.Dynamic
@@ -22,6 +23,7 @@ import Data.Maybe (fromMaybe)
 import Debug.Trace
 import Data.Binary
 import Control.Monad (liftM)
+import GramLab.Utils (uniq)
 
 data Smth a = Str { str :: String } | ES { es :: a } deriving (Eq,Ord,Show,Read)
 instance Binary a => Binary (Smth a) where
@@ -85,25 +87,32 @@ train :: (Ord a) =>
       -> [M.Model (Label a) Int String Double]
 train fspecs sents = 
   flip map fspecs
-           $ \fs ->  M.train (trainSettings fs) 
-                     . concatMap (sentToExamples fs) $ sents
-  
- 
-
+           $ \fs ->  let yxs = concatMap (sentToExamples fs) $ sents
+                         ys  = uniq . map fst $ yxs
+                         zs  = concat [ take (length s) 
+                                        . iterate slide 
+                                        . fromList
+                                        $ s 
+                                        | s <- sents ]
+                         yss = [ [ y | y <- ys , check fs z y ] 
+                                 | z <- zs ]
+                     in M.train (trainSettings fs) yss yxs
 
 toModelFun :: (Ord a,Show a) => 
               FeatureSpec a 
            -> (M.Model (Label a) Int String Double) 
            -> Model a
 toModelFun fs m = 
-    \ z -> case preprune fs 
-                .  (\xs -> case filter (check fs z . fst) xs of
-                             x:xs' -> x:xs'
-                             [] -> xs)
-                $ M.distribution m (features fs z) of
-             x:xs -> x:xs
+    let ys = Map.keys . M.classMap . M.modelData $ m
+    in
+    \ z -> case filter (check fs z) ys of
              [] -> error "GramLab.Morfette.Models.toModelFun: unexpected []"
-
+             y:ys' -> 
+                 preprune fs 
+                  . M.distribution m (y:ys')
+                  . features fs 
+                  $ z 
+           
 predict :: Int -> [Model a] -> [[Tok a]] -> [[Tok a]]
 predict beamSize models sents = map predictOne sents
     where predictOne s = fst 
@@ -122,9 +131,13 @@ sentToExamples ::  FeatureSpec a
                -> [Tok a] 
                -> [(Label a,[Feature String Double])]
 sentToExamples fs xs = slideThru f (fromList xs)
-    where f z = (label fs (fromMaybe (error "sentToExample:fromMaybe") 
-                                     (focus z))
-                , features fs z)
+    where f z = 
+              (  label fs 
+               . fromMaybe
+                     (error "GramLab.Morfette.Models.sentToExample:fromMaybe")
+               . focus 
+               $  z
+              , features fs z)
     
 slideThru f z  | atEnd z   = []
 slideThru f z              = f z:slideThru f (slide z) 

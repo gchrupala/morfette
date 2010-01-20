@@ -34,13 +34,19 @@ data IntModel = IntModel  { modelLabels   :: IntSet.IntSet
                           , modelWeights  :: P.Model } 
                 deriving (Show,Eq)
 
-train :: TrainSettings -> [(Int,[(Int,Double)])] -> IntModel 
+train :: TrainSettings -> [[Int]] -> [(Int,[(Int,Double)])] -> IntModel 
 -- For compatibility, examples have label first, feature second
-train s examples = model
+train s yss examples = model
  where examples' = [ (y,[ (i,realToFrac v) | (i,v) <- x ]) | (y,x) <- examples ]
        labels   =  map fst             examples'
        featids  =  concatMap (map fst . snd) examples'
-       weights  = P.train logger (occurTh s) (entropyTh s) (realToFrac $ rate s) (iter s) (lo,hi)
+       weights  = P.train logger 
+                          (occurTh s) 
+                          (entropyTh s) 
+                          (realToFrac $ rate s) 
+                          (iter s) 
+                          (lo,hi)
+                          yss
                   . map swap 
                   $ examples' 
        model    = IntModel { modelLabels   = IntSet.fromList (map fst examples')
@@ -48,7 +54,7 @@ train s examples = model
                            }
        (lo,hi) = ((minimum labels,minimum featids)
                  ,(maximum labels,maximum featids)) :: ((Int,Int),(Int,Int))
-       logger i p = let ys' = map (p . snd) examples'
+       logger i p = let ys' = map (\(ys,(y,x)) -> p ys x) $ zip yss examples'
                         err :: Double
                         err =   (fromIntegral . sum . map fromEnum  
                                                   $ zipWith (/=) ys' labels) 
@@ -56,13 +62,12 @@ train s examples = model
                     in printf "Iteration %d: error: %2.4f" i err    
        swap (x,y) = (y,x)
 
-evalAll :: IntModel -> [(Int,Double)] -> [(Int,Double)]
-evalAll m fs = 
+evalAll :: IntModel -> [Int] -> [(Int,Double)] -> [(Int,Double)]
+evalAll m ys fs = 
     let ((_,lo),(_,hi)) = P.bounds . modelWeights $ m
         fs' = filter (\(k,_) -> inRange (lo,hi) k) fs
     in map (\(i,v) -> (i,realToFrac v)) 
-                      . P.distribution (IntSet.toList . modelLabels $ m) 
-                                       (modelWeights m)
+                      . P.distribution ys (modelWeights m)
                       $ [ (i,realToFrac v) | (i,v) <- fs' ]
 instance B.Binary IntModel where
     put (IntModel ls ws)  = B.put ls >> B.put ws
