@@ -1,0 +1,19 @@
+Name:		morfette
+Version:	0.2
+Synopsis:	Morfette executable (Edit Tree version)
+Description:	Morfette executable (Edit Tree version): tool for supervised 
+		learning of morphology
+License:	BSD3
+License-file:   LICENSE
+Author:		Grzegorz Chrupała
+Maintainer:	Grzegorz Chrupała <gchrupala@lsv.uni-saarland.de>
+build-type:     Simple
+
+Executable:     morfette
+Main-Is:        Main.hs
+Build-depends:	base, containers, array, QuickCheck, mtl, 
+		directory, filepath, haskell98, pretty,
+		utf8-string, bytestring, binary
+cc-options:     -Wall 
+
+

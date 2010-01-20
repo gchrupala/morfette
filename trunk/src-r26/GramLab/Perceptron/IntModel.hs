@@ -14,6 +14,7 @@ import Data.List (sortBy)
 import Data.Ord (comparing)
 import System.IO (stderr,hPutStrLn)
 import Control.Monad (ap,liftM2)
+import Text.Printf (printf)
 import Data.Ix (inRange)
 
 
@@ -39,7 +40,8 @@ train s yss examples = model
  where examples' = [ (y,[ (i,realToFrac v) | (i,v) <- x ]) | (y,x) <- examples ]
        labels   =  map fst             examples'
        featids  =  concatMap (map fst . snd) examples'
-       weights  = P.train (occurTh s) 
+       weights  = P.train logger 
+                          (occurTh s) 
                           (entropyTh s) 
                           (realToFrac $ rate s) 
                           (iter s) 
@@ -52,6 +54,12 @@ train s yss examples = model
                            }
        (lo,hi) = ((minimum labels,minimum featids)
                  ,(maximum labels,maximum featids)) :: ((Int,Int),(Int,Int))
+       logger i p = let ys' = map (\(ys,(y,x)) -> p ys x) $ zip yss examples'
+                        err :: Double
+                        err =   (fromIntegral . sum . map fromEnum  
+                                                  $ zipWith (/=) ys' labels) 
+                                / fromIntegral (length labels)
+                    in printf "Iteration %d: error: %2.4f" i err    
        swap (x,y) = (y,x)
 
 evalAll :: IntModel -> [Int] -> [(Int,Double)] -> [(Int,Double)]
