@@ -51,8 +51,6 @@ train p examples = Model { model       = m
                                        }}
   where m = I.train p samples
         (ks,xs)       = unzip 
-                        . pruneSingletonFeats  
-                        . pruneSingletonLabels
                         $ examples
         (labels,cm)   = runState (mapM intern ks)       initial
         (featsets,fm) = runState (mapM toFeatureSet xs) initial
