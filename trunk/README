@@ -1,40 +1,37 @@
-Morfette 0.2 
-============
+=INTRODUCTION=
 
-Grzegorz Chrupała <gchrupala@lsv.uni-saarland.de>
+Morfette is a tool for supervised learning of inflectional
+morphology. Given a corpus of sentences annotated with lemmas 
+and morphological labels, and optionally a lexicon, morfette 
+learns how to morphologically analyse new sentences.
 
-INTRODUCTION 
-============
-Morfette is a tool for superivised learning of inflectional
-morphology. The basic approach is described in [1,2]. The system
-learns to perform joint morphological tagging and lemmatization from
-morphologically annotated corpora.  It is composed of two learning
-modules which are trained to predict morphological tags and lemmas
-using perceptron classifiers. The prediction module dynamically
-combines the output of the learned models and outputs a probability
-distribution over tag-lemma pair sequences. The lemmatization module
-exploits the idea of recasting lemmatization as a classification task
-by using class labels which encode mappings from word forms to lemmas.
+In the learning stage Morfette fits two separate logistic regression
+models: one for morphological tagging and one for lemmatization. The
+predictions of the models are combined dynamically and produce a 
+globally plausible sequence of morphological-tag - lemma pairs for 
+a sentence.
 
-Note that the current version uses perceptron training instead of
-Maxent training.
+In Morfette lemmatization is cast as a classification task where a 
+a lemmatization class corresponds to the specification of the edit 
+operations which are needed to transform the inflected word form into
+the corresponding lemma.
 
+The basic approach is described in (Chrupala et al 2008 and Chrupala 2008). 
+The current version of Morfette uses an averaged perceptron to 
+fit the models, rather than Maximum Entropy training. The lemmatization 
+classes are Edit-Tree-based as described in (Chrupala 2008).
 
-LICENSE 
-======= 
+=LICENSE= 
 The source code in the src directory is licensed under
 the BSD license.
 
-INSTALLATION
-============
-There is a pre-built Linux executable in the bin directory. Just copy
-it somewhere in your PATH. If it doesn't work on your system you will
+=INSTALLATION=
+Pre-built binaries are available from the project website. 
+If they don't work on your system you will
 need to build from source, using the GHC Haskell compiler. Build
-instructions are in src/INSTALL.
+instructions are in [INSTALL]
 
-
-USAGE
-=====
+=USAGE=
 Usage: morfette command [OPTION...] [ARG...]
 train:    train models
 train [OPTION...] TRAIN-FILE MODEL-DIR 
@@ -55,16 +52,15 @@ eval [OPTION...] TRAIN-FILE GOLD-FILE TEST-FILE
     --ignore-punctuation     ignore punctuation for evaluation
     --ignore-pos=POS-prefix  ignore POS starting with POS-prefix for evaluation
 
-EXAMPLE USAGE:
 
+=EXAMPLE USAGE=
 To train a new model:
 morfette train --dict-file=DICT TRAINING-FILE MODEL-DIR
 
 To use the model in MODEL-DIR to analyze new data:
 morfette predict MODEL-DIR < TEST-DATA > ANALYZED-TEST-DATA
 
-DATA FORMAT:
-
+=DATA FORMAT=
 Morfette expects both training and testing data to be tokenized and
 split into sentences. The format of training data look like this:
 
@@ -107,7 +103,7 @@ la
 misma
 
 
-References:
+=References=
 [1] Grzegorz Chrupala, Georgiana Dinu and Josef van Genabith. 2008.
     Learning Morphology with Morfette. In Proceedings of LREC 2008.
     http://www.lrec-conf.org/proceedings/lrec2008/pdf/594_paper.pdf
