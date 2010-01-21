@@ -16,10 +16,10 @@ a lemmatization class corresponds to the specification of the edit
 operations which are needed to transform the inflected word form into
 the corresponding lemma.
 
-The basic approach is described in (1,2). The current version 
-of Morfette uses an averaged perceptron to fit the models, rather 
-than Maximum Entropy training. The lemmatization classes are 
-Edit-Tree-based as described in (2).
+The basic approach is described in (Chrupala et al 2008 and Chrupala 2008). 
+The current version of Morfette uses an averaged perceptron to 
+fit the models, rather than Maximum Entropy training. The lemmatization 
+classes are Edit-Tree-based as described in (Chrupala 2008).
 
 =LICENSE= 
 The source code in the src directory is licensed under
@@ -105,11 +105,11 @@ misma
 }}}
 
 =References=
-# Grzegorz Chrupala, Georgiana Dinu and Josef van Genabith. 2008. 
+  * Grzegorz Chrupala, Georgiana Dinu and Josef van Genabith. 2008. 
 Learning Morphology with Morfette. In Proceedings of LREC 2008. 
 http://www.lrec-conf.org/proceedings/lrec2008/pdf/594_paper.pdf
 
-# Grzegorz Chrupala. 2008. Towards a Machine-Learning 
+  * Grzegorz Chrupala. 2008. Towards a Machine-Learning 
 Architecture for Lexical Functional Grammar Parsing. 
 Chapter 6. PhD dissertation, Dublin City University. 
 http://www.lsv.uni-saarland.de/personalPages/gchrupala/papers/phd.pdf
