@@ -2,14 +2,16 @@ module GramLab.Morfette.Settings.Defaults ( posTrainSettings
                                           , lemmaTrainSettings
                                           )
 where 
-import GramLab.Perceptron.Model
+import GramLab.Maxent.ZhangLe.Model
 
-lemmaTrainSettings = TrainSettings { iter      = 10
-                                   , rate      = 0.1
-                                   , occurTh = 40
-                                 , entropyTh = 0.0 }
-posTrainSettings = TrainSettings { iter      = 20
-                                 , rate      = 0.1
-                                 , occurTh = 40
-                                 , entropyTh = 0.0 }
+lemmaTrainSettings = TrainSettings { iter      = 50 
+                                   , gaussian  = 1 
+                                   , tolerance = 1e-05 
+                                   , verbose   = True 
+                                   , scale     = False } 
+posTrainSettings = TrainSettings { iter      = 60 
+                                 , gaussian  = 1 
+                                 , tolerance = 1e-05 
+                                 , verbose   = True 
+                                 , scale     = False } 
                    

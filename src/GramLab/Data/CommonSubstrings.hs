@@ -1,4 +1,4 @@
-{-# LANGUAGE NoMonomorphismRestriction#-} 
+{-# OPTIONS_GHC -fno-monomorphism-restriction #-}
 module GramLab.Data.CommonSubstrings ( lcs
                                      , lcsFiltering
                                      , commonSubstrings

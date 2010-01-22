@@ -5,7 +5,7 @@ module GramLab.Morfette.Utils ( train
                               , morfette
                               )
 where
-import Prelude hiding (print,getContents,putStrLn,putStr,writeFile,readFile)
+import Prelude hiding (getContents,putStrLn,writeFile,readFile)
 import System.IO (stderr,stdout)
 import System.IO.UTF8
 import GramLab.Commands
@@ -15,7 +15,8 @@ import qualified Data.Set as Set
 import qualified Data.Map as Map
 import Control.Monad hiding (join)
 import GramLab.Utils (padRight,splitWith,splitInto,join,tokenize,lowercase)
-import qualified GramLab.Perceptron.Model as M
+
+import qualified GramLab.Maxent.ZhangLe.Model    as M
 import GramLab.Morfette.Token
 import GramLab.Morfette.LZipper
 import GramLab.Morfette.MWE
@@ -27,11 +28,10 @@ import qualified Data.List as List
 import Data.Char
 import GramLab.Morfette.Lang.Conf
 import GramLab.Morfette.BinaryInstances
-import Data.Binary
+import Data.Binary.Strict
 import qualified Data.ByteString.Lazy as B
 import qualified GramLab.Morfette.Config as C
 import GramLab.Morfette.Evaluation
-import GramLab.Morfette.Settings.Defaults
 
 data Flag = ModelPrefix String
           | Eval
@@ -45,57 +45,43 @@ data Flag = ModelPrefix String
           | IgnorePunct
           | IgnorePOS String
           | Pipeline
-          | EntropyTh Double
-          | IterPOS Int
-          | IterLemma Int
           deriving Eq
 
 morfette fs fspecs = defaultMain (commands fs fspecs) "Usage: morfette command [OPTION...] [ARG...]"
 
 commands fs fspecs = [
              ("train" , CommandSpec (train fs fspecs)
-                          "train models"
-                          [ Option [] ["dict-file"] 
-                                       (ReqArg DictFile "PATH")
+                          "train maxent model"
+                          [  Option [] ["dict-file"] (ReqArg DictFile "PATH")
                                        "path to optional dictionary"
-                          , Option [] ["language-configuration"] 
-                                       (ReqArg Lang "es|pl|tr|..")
-                                       "language configuration"
-                          , Option [] ["iter-pos"] 
-                                       (ReqArg (IterPOS . read) "NUM")
-                                       "iterations for POS model"
-                          , Option [] ["iter-lemma"] 
-                                       (ReqArg (IterLemma . read) "NUM")
-                                       "iterations for Lemma model"
+                          , Option [] ["language-configuration"] (ReqArg Lang "es|pl|tr|..")
+                                  "language configuration"
+                          , Option [] ["gaussian-prior"] (ReqArg (Gaussian . read) "NUM")
+                                   "gaussian-prior"
                           ] 
-              [ "TRAIN-FILE", "MODEL-DIR" ])
+                          [ "TRAIN-FILE", "MODEL-DIR" ])
               
            , ("predict" , CommandSpec (predict fs fspecs)
                             "predict postags and lemmas using saved model data"
-                            [ Option [] ["beam"]   
-                                         (ReqArg (BeamSize . read) "+INT")
+                            [ Option [] ["beam"]   (ReqArg (BeamSize . read) "+INT")
                                          "beam size to use"
-                            , Option [] ["tokenize"] 
-                                         (NoArg Tokenize)
+                            , Option [] ["tokenize"] (NoArg Tokenize)
                                          "tokenize input"
+                            , Option [] ["pipeline"] (NoArg Pipeline)
+                                         "use pipeline model"
                             ] 
                             [ "MODEL-DIR" ] )
            , ("eval" , CommandSpec eval 
                           "evaluate morpho-tagging and lemmatization results"
-                          [ Option [] ["ignore-case"] 
-                                       (NoArg IgnoreCase)
+                          [ Option [] ["ignore-case"] (NoArg IgnoreCase)
                                        "ignore case for evaluation"
-                          , Option [] ["baseline-file"] 
-                                       (ReqArg BaselineFile "PATH")
+                          , Option [] ["baseline-file"] (ReqArg BaselineFile "PATH")
                                       "path to baseline results"
-                          , Option [] ["dict-file"] 
-                                       (ReqArg DictFile "PATH")
+                          , Option [] ["dict-file"] (ReqArg DictFile "PATH")
                                        "path to optional dictionary"
-                          , Option [] ["ignore-punctuation"] 
-                                       (NoArg IgnorePunct)
+                          , Option [] ["ignore-punctuation"] (NoArg IgnorePunct)
                                        "ignore punctuation for evaluation"
-                          , Option [] ["ignore-pos"] 
-                                       (ReqArg IgnorePOS "POS-prefix")
+                          , Option [] ["ignore-pos"] (ReqArg IgnorePOS "POS-prefix")
                                        "ignore POS starting with POS-prefix for evaluation"
                           ]
                           ["TRAIN-FILE","GOLD-FILE","TEST-FILE"])
@@ -103,26 +89,18 @@ commands fs fspecs = [
 
 
 predict (_,format) fspecs flags [modelprefix] = do
-  hPutStrLn stderr $ "Loading models from " ++ (modelFile modelprefix)
+  mwes <- loadMwes (mweFile modelprefix)
+  toks <- fmap (getToks flags mwes) getContents
+  lex        <- readConf (confFile modelprefix)
   ms <- fmap decode (B.readFile (modelFile modelprefix))
-  ms == ms `seq` return ()
-  when True $ do
-    mwes <- loadMwes (mweFile modelprefix)
-    lex        <- readConf (confFile modelprefix)
-    txt <- getContents
-    let models = zipWith Models.toModelFun (map ($lex) fspecs) ms
-        defaultBeamSize = 3
-        n = case [f | BeamSize f <- flags ] 
-            of { [f] -> f ; _ -> defaultBeamSize }
-        f = if Pipeline `elem` flags 
-            then Models.predictPipeline
-            else Models.predict
-    putStr . unlines 
-           . map format 
-           . f n models 
-           . toksToForms 
-           . getToks flags mwes
-           $ txt
+  let models = zipWith Models.toModelFun (map ($lex) fspecs) ms
+      sentences = toksToForms toks
+      defaultBeamSize = 3
+      n = case [f | BeamSize f <- flags ] of { [f] -> f ; _ -> defaultBeamSize }
+      predictions = if Pipeline `elem` flags 
+                    then Models.predictPipeline n models sentences
+                    else Models.predict  n models sentences
+  putStrLn (join "\n" (map format predictions))
 
 confFile       dir = dir </> "conf.model"
 mweFile        dir = dir </> "mwe.model" 
@@ -133,29 +111,15 @@ train (prepr,_) fspecs flags [dat,modeldir] = do
   toks <- fmap (map parseToken . lines) (readFile dat)
   dict <- getDict flags        
   let langConf = case [f | Lang f <- flags ] of { [] -> "xx" ; [f] -> f }
-      lex = Conf { dictLex = dict
-                 , trainLex = toksToLexicon toks
-                 , lang = langConf }
+      lex = Conf { dictLex = dict, trainLex = toksToLexicon toks, lang = langConf }
       mwes = mweSet toks
-      g = case [f | EntropyTh f <- flags ] of 
-            [] -> M.entropyTh posTrainSettings  
-            [f] -> f 
-      i_p = case [f | IterPOS f <- flags ] of  
-              [] ->  M.iter posTrainSettings 
-              [f] -> f 
-      i_l = case [f | IterLemma f <- flags ] of  
-              [] ->  M.iter lemmaTrainSettings 
-              [f] -> f 
+      g = case [f | Gaussian f <- flags ] of { [] -> defaultGaussianPrior ; [f] -> f }
       sentences = toksToSentences prepr toks
   createDirectoryIfMissing True modeldir
-  let models = Models.train (map (\(i,fs) -> 
-                                      let fs' = fs lex
+  models <- Models.train (map (\fs -> let fs' = fs lex
                                           ts = Models.trainSettings fs'
-                                      in fs' { Models.trainSettings = 
-                                                   ts { M.entropyTh = g 
-                                                      , M.iter = i
-                                                      } })
-                             $ zip [i_p,i_l] fspecs) 
+                                      in fs' { Models.trainSettings = ts { M.gaussian = g } })
+                          fspecs) 
             $ sentences
   B.writeFile (modelFile modeldir) (encode models)
   saveConf (confFile modeldir) lex
@@ -165,9 +129,7 @@ toksToSentences :: (Token -> Models.Tok a) -> [Token] -> [[Models.Tok a]]
 toksToSentences f toks = map (map f)  $ splitWith isNullToken toks
 
 toksToForms :: [Token] -> [[Models.Tok a]]
-toksToForms toks = map (map (\ (f,_,_) ->[Str f])) 
-                   . splitWith isNullToken 
-                   $ toks
+toksToForms toks = map (map (\ (f,_,_) ->[Str f]))  $ splitWith isNullToken toks
 
 parseSents :: String -> [[Models.Tok a]]
 parseSents  = splitWith null . map (map Str) . map words . lines
@@ -182,16 +144,21 @@ getDict flags = do
 
 getToks :: [Flag] -> [[String]] -> String -> [Token]
 getToks flags mwes text = 
-    let f = if Tokenize `elem` flags 
-            then  concatMap (detectMwes mwes) 
-                  . List.intersperse [""] 
-                  . map tokenize 
-            else id
-    in map parseToken . f . lines $ text
+    let ls = lines text
+    in if Tokenize `elem` flags
+          then map parseToken 
+                   . concatMap (detectMwes mwes) 
+                   . List.intersperse [""] 
+                   . map tokenize $ ls 
+       else map parseToken ls
+
              
 
 formatTriple (form,lemma,pos) = unwords . map (padRight ' ' 12) $ [form,lemma,pos] 
 formatToken (f,ml,mp) = unwords [f,fromMaybe "" ml,fromMaybe "" mp]
+
+
+
 
 getEval flags trainf goldf testf = do
   let uncase = if IgnoreCase `elem` flags then
@@ -244,8 +211,7 @@ eval flags [trainf,goldf,testf] = do
   putStrLn $ "Token accuracy unseen:\n" ++ showAccuracy unseen_acc
   when (Map.size dict > 0) 
        (putStrLn $ "Token accuracy unseen train+dict:\n" ++ showAccuracy unseen_train_and_dict_acc)
--- FIXME Sentence accuracy is broken
---  putStrLn $ "Sentence accuracy:\n" ++ showAccuracy sent_acc
+  putStrLn $ "Sentence accuracy:\n" ++ showAccuracy sent_acc
   where toks  xs   = filter (not . isNullToken) xs
         sents xs   = splitWith isNullToken xs
     

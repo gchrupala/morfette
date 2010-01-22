@@ -11,8 +11,9 @@ module GramLab.Morfette.Lang.Conf ( Lexicon
                                 )
 where
 import qualified Data.Map as Map
-import Data.Binary hiding (decode)
-import qualified Data.Binary as Binary (decode)
+import qualified Data.MultiSet as MS
+import Data.Binary.Strict hiding (decode)
+import qualified Data.Binary.Strict as Binary (decode)
 import qualified Data.ByteString.Lazy as BS
 import Data.Maybe (catMaybes)
 import GramLab.Utils (padRight,splitWith,splitInto,lowercase)
@@ -22,7 +23,7 @@ type Lang = String
 type Lexicon = Map.Map String [(String, String, Double)]
 data Conf = Conf { dictLex  :: Lexicon
                  , trainLex :: Lexicon 
-                 , lang     :: Lang } deriving (Eq)
+                 , lang     :: Lang }
 
 instance Binary Conf where
     put (Conf x y z) = put x >> put y >> put z
@@ -47,23 +48,15 @@ readConf path = do
   return (Binary.decode txt)
 
 toksToLexicon :: [Token] -> Lexicon
-toksToLexicon xs = 
-    Map.map 
-           (\ys -> let ms = Map.fromListWith (+) 
-                            . map (\x -> (x,1))
-                            $  ys
-                       size = fromIntegral $ Map.size ms
-                   in  map (\((lemma,pos),count) 
-                                -> (lemma,pos,fromIntegral count/size))
-                           . Map.toList 
-                           $ ms)
-           . foldr (\(form,lemma,pos) m -> 
-                        Map.insertWith (++) form [(lemma,pos)] m) Map.empty 
-           . catMaybes $ flip map xs $ \x ->
-               case x of
-                 (form, Just lemma, Just pos) -> 
-                     Just (lowercase form, lowercase lemma,lowercase pos)
-                 _  -> Nothing
+toksToLexicon xs = Map.map (\ys -> let ms = MS.fromList ys
+                                       size = fromIntegral $ MS.size ms
+                                   in  map (\((lemma,pos),count) 
+                                                    -> (lemma,pos,fromIntegral count/size)) (MS.toOccurList ms))
+                       . foldr (\(form,lemma,pos) m -> Map.insertWith (++) form [(lemma,pos)] m) Map.empty 
+                       . catMaybes $ flip map xs $ \x ->
+                           case x of
+                             (form, Just lemma, Just pos) -> Just (lowercase form, lowercase lemma,lowercase pos)
+                             _                            -> Nothing
 
 parseLexicon text = Map.fromList . map parseEntry . lines $ text
     
@@ -71,9 +64,7 @@ parseEntry :: String -> (String, [(String, String, Double)])
 parseEntry line = 
     let (form:pairs) = words line 
         len          = fromIntegral $ length pairs
-    in  (form,(map (\ [lemma,pos] 
-                        -> (lowercase lemma,lowercase pos,1/len)) 
-               (splitInto 2 pairs)))
+    in  (form,(map (\ [lemma,pos] -> (lowercase lemma,lowercase pos,1/len)) (splitInto 2 pairs)))
 
 
 splitPOS :: Lang -> String -> [String]

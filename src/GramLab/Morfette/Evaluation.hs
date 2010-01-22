@@ -9,7 +9,7 @@ import Data.Maybe
 import GramLab.Utils (lowercase)
 import Text.Printf
 import GramLab.Binomial
-
+import GramLab.Metrics (rer)
 
 data Accuracy = Acc { lemmaAcc :: AccBL
                     , posAcc   :: AccBL 
@@ -20,9 +20,6 @@ data AccBL = AccBL { test :: [Bool]
 
 data Experiment = Ex { trials :: Integer
                      , successes :: Integer } deriving (Show)
-
-
-rer hi lo = ((1-lo)-(1-hi))/(1-lo)
 
 significance :: [Bool] -> [Bool] -> Experiment
 significance test baseline = Ex { trials = fromIntegral $ countTrue $ zipWith (/=) test baseline

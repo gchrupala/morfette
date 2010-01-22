@@ -14,7 +14,6 @@ module GramLab.Utils ( join
                      , index
                      , unfoldrM
                      , tokenize
-                     , uniq
                      )
     
 where
@@ -91,8 +90,3 @@ sepPunct xs = let (before,rest) = span isPunctuation xs
               in filter (not . null) [before,reverse this,reverse after]
 tokenize :: String -> [String]
 tokenize = concatMap sepPunct . words
-
-
-uniq :: (Ord a) => [a] -> [a]
-{-# SPECIALIZE INLINE uniq :: [String] -> [String] #-}
-uniq = Set.toList . Set.fromList 
