@@ -10,7 +10,7 @@ License-file:   LICENSE
 Author:		Grzegorz Chrupała
 Maintainer:	Grzegorz Chrupała <gchrupala@lsv.uni-saarland.de>
 build-type:     Simple
-category:       Natural Language Processing
+category:       NLP
 Extra-source-files:	README
 
 Executable:     morfette
@@ -30,7 +30,7 @@ Other-Modules:  GramLab.Commands, GramLab.Morfette.LZipper,
 		GramLab.Morfette.Settings.Defaults, 
 		GramLab.Morfette.Features.Common, 
 		Lemma, POS, GramLab.Morfette.Utils
-Build-depends:	base >=3 && <=4 , containers, array, QuickCheck, mtl, 
+Build-depends:	base, containers, array, QuickCheck, mtl, 
 		directory, filepath, haskell98, pretty,
 		utf8-string, bytestring, binary
 cc-options:     -Wall 
