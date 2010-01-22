@@ -131,10 +131,10 @@ defaultGaussianPrior = 1
 
 train (prepr,_) fspecs flags [dat,modeldir] = do
   toks <- fmap (map parseToken . lines) (readFile dat)
-  dict <- getDict flags        
+  let tokSet = Set.fromList [ s | (s,_,_) <- toks ]
+  dict <- getDict flags tokSet
   let langConf = case [f | Lang f <- flags ] of { [] -> "xx" ; [f] -> f }
       lex = Conf { dictLex = dict
-                 , trainLex = toksToLexicon toks
                  , lang = langConf }
       mwes = mweSet toks
       g = case [f | EntropyTh f <- flags ] of 
@@ -158,7 +158,7 @@ train (prepr,_) fspecs flags [dat,modeldir] = do
                              $ zip [i_p,i_l] fspecs) 
             $ sentences
   B.writeFile (modelFile modeldir) (encode models)
-  saveConf (confFile modeldir) lex
+
   saveMwes (mweFile modeldir) mwes
 
 toksToSentences :: (Token -> Models.Tok a) -> [Token] -> [[Models.Tok a]]
@@ -172,12 +172,12 @@ toksToForms toks = map (map (\ (f,_,_) ->[Str f]))
 parseSents :: String -> [[Models.Tok a]]
 parseSents  = splitWith null . map (map Str) . map words . lines
 
-getDict :: [Flag] -> IO Lexicon
-getDict flags = do
+getDict :: [Flag] -> Set.Set String -> IO Lexicon
+getDict flags tokSet = do
   case [f | DictFile f <- flags ] of
     [f] -> do 
-            text <- readFile f
-            return (parseLexicon text)
+            d <- fmap (parseLexicon tokSet)  $ readFile f
+            return d
     [] -> return emptyLexicon
 
 getToks :: [Flag] -> [[String]] -> String -> [Token]
@@ -220,10 +220,10 @@ getEval flags trainf goldf testf = do
 -- FIXME its breaks sentence accuracy somehow...
 
 eval flags [trainf,goldf,testf] = do
-  dict  <- getDict flags
   (train,gold,test,baseline) <- fmap (\ (tr, g, t, b) -> (tr,toks g, toks t, fmap toks b)) (getEval flags trainf goldf testf)
   let seen = Set.fromList (map tokenForm train)
-      isUnseen (form,_,_) = not (form `Set.member` seen)
+  dict  <- getDict flags seen
+  let isUnseen (form,_,_) = not (form `Set.member` seen)
       isUnseenInDict (form,_,_) = not (lowercase form `Map.member` dict)
       isUnseenBoth x = isUnseen x && isUnseenInDict x
       all_acc    = tokenAccuracy gold test baseline

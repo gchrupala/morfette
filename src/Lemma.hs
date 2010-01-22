@@ -33,7 +33,7 @@ theFeatures  global tic = focusFeatures     (focus tic)
                                               ++ suffixes maxSuffix (low form)
           focusFeatures other = error $ "Lemma.theFeatures: " ++ show other
           low = lowercase
-          lexmap w = Set $ map (\(l,p,c) -> show $ make w l) $ Map.findWithDefault [] w (dictLex global)
+          lexmap w = Set $ map (show . make w . fst) $ Map.findWithDefault [] w (dictLex global)
 
 decode str = case reads str of
                [(s,"")] -> s

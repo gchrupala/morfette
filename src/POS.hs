@@ -36,6 +36,6 @@ theFeatures global tic = let prev = getSome  leftCtx   (left tic)
           rightFeatures (Just (Str form:_)) = [Sym (low form),lexmap (low form)]
           rightFeatures Nothing     = [Null, Null]
           low = lowercase
-          lexmap w = Set $ map (\(l,p,c) -> p) $ Map.findWithDefault [] w (dictLex global)
+          lexmap w = Set $ map snd $ Map.findWithDefault [] w (dictLex global)
           getpos Nothing = ""
           getpos (Just (Str form:Str label:_)) = head (splitPOS (lang global) label)
