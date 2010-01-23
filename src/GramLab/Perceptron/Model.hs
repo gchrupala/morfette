@@ -18,9 +18,11 @@ import qualified Data.Binary as B
 import qualified Data.IntMap as IntMap
 import qualified Data.Map    as Map
 import Data.Map ((!))
+import qualified Data.IntSet as IntSet
+import Data.Array.Unboxed hiding ((!))
 import Data.List (foldl')
 import Data.Maybe (catMaybes)
-
+import GramLab.Utils (uniq)
 import Data.Char (isAlphaNum)
 import GramLab.Intern
 import GramLab.Data.Assoc
@@ -55,8 +57,13 @@ train p yss examples =
                         , classMap    = cm
                         , inverseClassMap = invertMap cm
                         }}
-  where m = I.train p (map (map (cm !)) yss) samples
+  where m = I.train p yss' samples
         (ys,xs)    = unzip examples
+        yss' =    accumArray (flip const) False ((0,lo),(length yss-1,hi))
+                . concatMap (\(i,js) -> [ ((i,cm!j),True) | j <- js ])
+               $ zip [0..] yss
+        (lo,hi) = (minimum yset,maximum yset)
+        yset       = IntSet.toList . IntSet.fromList $ ys'
         (ys',T _ cm)   = flip runState initial $ mapM intern ys
         (featsets,fm)  = runState (mapM toFeatureSet xs) initial
         samples        = zipWith (\l fs -> (l,IntMap.toList fs)) 

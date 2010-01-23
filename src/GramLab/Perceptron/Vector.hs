@@ -7,7 +7,7 @@ module GramLab.Perceptron.Vector
     , plus_
     , scale
     , dot 
-    , dot_
+    , dot'
     , unsafeDot
     )
 where
@@ -33,9 +33,9 @@ for_ xs f = mapM_ f xs
 plus_ :: (Show (y,i),Ix (y,i)) => 
          DenseVectorST s (y,i) 
       -> SparseVector y i -> ST s ()
-plus_ w (v,y) = do
-  for_ v $ \(i,vi) -> do
-             wi <- readArray w (y,i) 
+plus_ w (v,!y) = do
+  for_ v $ \(!i,!vi) -> do
+             !wi <- readArray w (y,i) 
              writeArray w (y,i) (wi + vi)
 
 {-# SPECIALIZE scale :: SparseVector Int Int 
@@ -52,18 +52,16 @@ dot w (x,!y) = go 0 x
     where go !s [] = s
           go !s ((!i,!xi):x) = go (s + (w ! (y,i)) * xi) x
 
-{-# INLINE dot_ #-}
-dot_ :: (STRef s Int, DenseVectorST s (Int,Int), DenseVectorST s (Int,Int))  
+{-# INLINE dot' #-}
+dot' :: (Float,DenseVector (Int,Int),DenseVector (Int,Int)) 
      -> ([(Int,Float)],Int)
-     -> ST s Float
-dot_ (c,params,params_a) (x,y) = do
-  c' <- fmap fromIntegral (readSTRef c)
-  let go !s [] = return s
-      go !s ((i,xi):x) = do
-        e   <- readArray params   (y,i)
-        e_a <- readArray params_a (y,i)
-        go (s + (e - (e_a * (1/c'))) * xi) x
-  go 0 x
+     -> Float
+dot' (!c,params,params_a) (x,!y) = go 0 x
+  where go !s [] = s
+        go !s ((!i,!xi):x) = 
+            let e   = params   ! (y,i)
+                e_a = params_a ! (y,i)
+            in go (s + (e - (e_a * (1/c))) * xi) x
 
 {-# INLINE unsafeDot #-}
 {-# SPECIALIZE unsafeDot :: DenseVector (Int,Int) 
