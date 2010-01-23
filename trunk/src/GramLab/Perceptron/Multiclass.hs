@@ -20,8 +20,10 @@ import Data.List (foldl',sort)
 import Prelude hiding (sum,product)
 import qualified Data.Binary as B
 import qualified Data.Map as Map
-import qualified Data.Set as Set
 import Data.Map ((!))
+import qualified Data.Set as Set
+import qualified Data.IntSet as IntSet
+import Data.Bits
 import Data.Maybe (isJust,fromMaybe)
 import GramLab.Utils (uniq)
 import Text.Printf (printf)
@@ -57,14 +59,13 @@ decode :: Model -> [Y] -> X -> Y
 decode (MC w) ys x = snd . maximum 
                        $ [ (w`dot`phi x y,y) | y <- ys ]
 
-{-# INLINE decode_ #-}
-decode_ :: (STRef s Int, DenseVectorST s (Y,I), DenseVectorST s (Y,I)) 
+{-# INLINE decode' #-}
+decode' :: (Float, DenseVector (Y,I), DenseVector (Y,I)) 
            -> [Y]
            -> X
-           -> ST s Y
-decode_ w ys x =   fmap (snd . maximum)  
-                 $ mapM (\y -> do { r <- w`dot_`phi x y ; return (r,y) } )
-                 $ ys
+           -> Y
+decode' w ys x = snd . maximum 
+                       $ [ (w`dot'`phi x y,y) | y <- ys ]  
 
 
 {-# INLINE softmax #-}
@@ -82,14 +83,17 @@ distribution (MC w) ys x =
     in reverse . map swap . sort $ zip (softmax fxs) ys
 
 iter ::    Float
-        -> [[Y]]
+        -> A.UArray (Int,Int) Bool
         -> [(X, Y)]
         -> (STRef s Int, DenseVectorST s (Y,I), DenseVectorST s (Y,I))
         -> ST s ()
 iter rate yss ss (c,params,params_a) = do
-    for_ (zip yss ss) $ \ (ys',(x,y)) -> do
+    let ((_,lo),(_,hi)) = A.bounds yss
+        ys = [lo..hi]
+    for_ (zip [0..] ss) $ \ (i,(x,y)) -> do
       params' <- unsafeFreeze params
-      let y'= decode (MC params') ys' x
+      let ys' = [ y | y <- ys , yss A.! (i,y) ] 
+          y'= decode (MC params') ys' x
           phi_xy = phi x y
           phi_xy' = phi x y'
       when (y' /= y) $ do 
@@ -100,31 +104,38 @@ iter rate yss ss (c,params,params_a) = do
         params_a `plus_` (phi_xy' `scale` (rate * (-1) * fromIntegral c'))
       modifySTRef c (+1)
 
-train ::    Int 
-         -> Double
-         -> Float
+train ::    Float
          -> Int
          -> ((Y,I), (Y,I))
-         -> [[Y]]
+         -> A.UArray (Int,Int) Bool
          -> [(X, Y)]
          -> Model
-train th1 th2 rate epochs bounds yss xys =  MC m
+train rate epochs bounds yss xys =  MC m
   where m = runSTUArray $ do
               trace (show bounds) () `seq` return ()
               params <- newArray bounds 0
               params_a <- newArray bounds 0
               c <- newSTRef 1
+              let ixys = zip [0..] xys
+                  ((_,lo),(_,hi)) = A.bounds yss
+                  ys = [lo..hi]
               for_ [1..epochs] $ 
-                       \i -> do iter rate yss xys (c,params,params_a)
-                                corr <- fmap sum 
-                                        . flip mapM (zip yss xys)
-                                        $ \(ys,(x,y)) -> do 
-                                          y'<- decode_ (c,params,params_a) ys x 
-                                          return . fromEnum $ y' /= y
-                                let err :: Double
-                                    err = fromIntegral corr / 
+                     \i -> do iter rate yss xys (c,params,params_a)
+                              c' <- readSTRef c
+                              params' <- unsafeFreeze params
+                              params_a' <- unsafeFreeze params_a
+                              let w  = (fromIntegral c',params',params_a')
+                                  corr = sum 
+                                         . map (\(j,(x,y)) -> 
+                                                let s = [ y | y <- ys 
+                                                          , yss A.!(j,y)]
+                                                in fromEnum 
+                                                       $  y /= decode' w s x)
+                                         $ ixys
+                              let err :: Double
+                                  err = fromIntegral corr / 
                                           fromIntegral (length xys)
-                                runLogger 
+                              runLogger 
                                   $ hPutStrLn stderr
                                   $ printf "Iteration %d: error: %2.4f" i err 
               finalParams (c, params,  params_a)

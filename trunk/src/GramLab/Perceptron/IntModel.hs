@@ -15,7 +15,7 @@ import Data.Ord (comparing)
 import System.IO (stderr,hPutStrLn)
 import Control.Monad (ap,liftM2)
 import Data.Ix (inRange)
-
+import Data.Array.Unboxed
 
 import qualified GramLab.Perceptron.Multiclass as P
 
@@ -33,21 +33,21 @@ data IntModel = IntModel  { modelLabels   :: IntSet.IntSet
                           , modelWeights  :: P.Model } 
                 deriving (Show,Eq)
 
-train :: TrainSettings -> [[Int]] -> [(Int,[(Int,Double)])] -> IntModel 
+train :: TrainSettings -> UArray (Int,Int) Bool
+      -> [(Int,[(Int,Double)])] -> IntModel 
 -- For compatibility, examples have label first, feature second
 train s yss examples = model
- where examples' = [ (y,[ (i,realToFrac v) | (i,v) <- x ]) | (y,x) <- examples ]
+ where examples' = 
+                   [ (y,[ (i,realToFrac v) | (i,v) <- x ]) | (y,x) <- examples ]
+       examples'' = map swap examples'
        labels   =  map fst             examples'
        featids  =  concatMap (map fst . snd) examples'
-       weights  = P.train (occurTh s) 
-                          (entropyTh s) 
-                          (realToFrac $ rate s) 
+       weights  = examples'' == examples'' `seq` P.train (realToFrac $ rate s) 
                           (iter s) 
                           (lo,hi)
                           yss
-                  . map swap 
-                  $ examples' 
-       model    = IntModel { modelLabels   = IntSet.fromList (map fst examples')
+                  $ examples'' 
+       model    = IntModel { modelLabels   = IntSet.fromList labels
                            , modelWeights      = weights
                            }
        (lo,hi) = ((minimum labels,minimum featids)

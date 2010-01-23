@@ -81,7 +81,7 @@ trainFun fspecs sents =
   let ms = train fspecs sents
   in (zipWith toModelFun fspecs ms) 
  
-train :: (Ord a) => 
+train :: (Ord a,Show a) => 
          [FeatureSpec a] 
       -> [[Tok a]]  
       -> [M.Model (Label a) Int String Double]

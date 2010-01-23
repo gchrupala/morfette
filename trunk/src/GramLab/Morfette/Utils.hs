@@ -32,6 +32,7 @@ import qualified Data.ByteString.Lazy as B
 import qualified GramLab.Morfette.Config as C
 import GramLab.Morfette.Evaluation
 import GramLab.Morfette.Settings.Defaults
+import Debug.Trace
 
 data Flag = ModelPrefix String
           | Eval
@@ -131,7 +132,7 @@ defaultGaussianPrior = 1
 
 train (prepr,_) fspecs flags [dat,modeldir] = do
   toks <- fmap (map parseToken . lines) (readFile dat)
-  let tokSet = Set.fromList [ s | (s,_,_) <- toks ]
+  let tokSet = Set.fromList [ s | t@(s,_,_) <- toks ]
   dict <- getDict flags tokSet
   let langConf = case [f | Lang f <- flags ] of { [] -> "xx" ; [f] -> f }
       lex = Conf { dictLex = dict
@@ -158,7 +159,6 @@ train (prepr,_) fspecs flags [dat,modeldir] = do
                              $ zip [i_p,i_l] fspecs) 
             $ sentences
   B.writeFile (modelFile modeldir) (encode models)
-
   saveMwes (mweFile modeldir) mwes
 
 toksToSentences :: (Token -> Models.Tok a) -> [Token] -> [[Models.Tok a]]
