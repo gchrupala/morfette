@@ -5,7 +5,8 @@ module GramLab.Morfette.Utils ( train
                               , morfette
                               )
 where
-import Prelude hiding (print,getContents,putStrLn,putStr,writeFile,readFile)
+import Prelude hiding (print,getContents,putStrLn,putStr
+                      ,writeFile,readFile)
 import System.IO (stderr,stdout)
 import System.IO.UTF8
 import GramLab.Commands
@@ -13,8 +14,10 @@ import qualified GramLab.Morfette.Models as Models
 import GramLab.Morfette.Models (Smth(..))
 import qualified Data.Set as Set
 import qualified Data.Map as Map
+import qualified Data.IntMap as IntMap
 import Control.Monad hiding (join)
-import GramLab.Utils (padRight,splitWith,splitInto,join,tokenize,lowercase)
+import GramLab.Utils (padRight,splitWith,splitOn
+                     ,splitInto,join,tokenize,lowercase)
 import qualified GramLab.Perceptron.Model as M
 import GramLab.Morfette.Token
 import GramLab.Morfette.LZipper
@@ -32,6 +35,8 @@ import qualified Data.ByteString.Lazy as B
 import qualified GramLab.Morfette.Config as C
 import GramLab.Morfette.Evaluation
 import GramLab.Morfette.Settings.Defaults
+import GramLab.Intern (Table(..),intern,initial,runState,evalState)
+import GramLab.FeatureSet (toFeatureSet,FeatureSet)
 import Debug.Trace
 
 data Flag = ModelPrefix String
@@ -49,6 +54,7 @@ data Flag = ModelPrefix String
           | EntropyTh Double
           | IterPOS Int
           | IterLemma Int
+          | ModelId String
           deriving Eq
 
 morfette fs fspecs = defaultMain (commands fs fspecs) "Usage: morfette command [OPTION...] [ARG...]"
@@ -70,6 +76,16 @@ commands fs fspecs = [
                                        "iterations for Lemma model"
                           ] 
               [ "TRAIN-FILE", "MODEL-DIR" ])
+           , ("extract-features", CommandSpec (extractFeatures fs fspecs)
+                                "extract features"
+                                [  Option [] ["dict-file"] 
+                                       (ReqArg DictFile "PATH")
+                                       "path to optional dictionary"
+                                , Option [] ["model-id"]
+                                       (ReqArg ModelId "pos|lemma")
+                                       "model id (`pos' or `lemma')"
+                                ]
+              [ "MODEL-DIR"])
               
            , ("predict" , CommandSpec (predict fs fspecs)
                             "predict postags and lemmas using saved model data"
@@ -128,12 +144,72 @@ predict (_,format) fspecs flags [modelprefix] = do
 confFile       dir = dir </> "conf.model"
 mweFile        dir = dir </> "mwe.model" 
 modelFile      dir = dir </> "models.model"
+classMapFile   dir = dir </> "classmap.model"
+featMapFile    dir = dir </> "featmap.model"
+
 defaultGaussianPrior = 1
 
+extractFeatures  :: (Ord a,Binary a,Show a) =>
+     (Token -> Models.Tok a, t)
+     -> [Conf -> Models.FeatureSpec a]
+     -> [Flag]
+     -> [FilePath]
+     -> IO ()
+extractFeatures (prepr,fmt) [fspos,fslem] flags [modeldir] = do
+  dict <- getDict flags Nothing
+  --  dict == dict `seq` return ()
+  let langConf = case [f | Lang f <- flags ] of { [] -> "xx" ; [f] -> f }
+      lex = Conf { dictLex = dict
+                 , lang = langConf }
+      fs = case [f | ModelId f <- flags ] of
+              ["pos"]   -> fspos lex
+              ["lemma"] -> fslem lex
+              []        -> fspos lex
+              other -> error $ "GramLab.Morfette.Utils.extractFeatures: " 
+                       ++ "invalid option value: " ++ show other
+  toks <- fmap (map parseToken . lines) getContents
+  let ws = filter (not . null) . map tokenForm $ toks
+      (xm,ym,xys) =  convertFeatures
+         . map swap
+         . concatMap (Models.sentToExamples fs)
+         . toksToSentences prepr 
+         $ toks 
+  putStr . unlines 
+             . map format
+             . zip ws
+             $ xys
+  B.writeFile (classMapFile modeldir) . encode $ ym
+  B.writeFile (featMapFile modeldir) . encode $ xm
+
+format :: (String,(IntMap.IntMap Double,Int)) -> String
+format (w,(x,y)) = unwords (w:show y : [ show i ++ ":" ++ show n 
+                                       | (i,n) <- IntMap.toList x ])
+parse :: String -> (String,(IntMap.IntMap Double,Int))
+parse s = case words s of
+            (w:y:x) -> (w,( IntMap.fromList [ (read i,read xi) 
+                                         | ixi <- x
+                                       , let [i,xi] = splitOn ':' ixi
+                                       ]
+                     , read y ))
+swap (y,x) = (x,y)
+
+convertFeatures xys = 
+    let (xs,ys) = unzip xys
+        (xs',xm) = flip runState initial . mapM toFeatureSet $ xs
+        (ys',ym) = flip runState initial . mapM intern $ ys
+    in (xm,ym,zip xs' ys')
+
+
+train  :: (Ord a, Show a, Binary a) =>
+     (Token -> Models.Tok a, t)
+     -> [Conf -> Models.FeatureSpec a]
+     -> [Flag]
+     -> [FilePath]
+     -> IO ()
 train (prepr,_) fspecs flags [dat,modeldir] = do
   toks <- fmap (map parseToken . lines) (readFile dat)
   let tokSet = Set.fromList [ s | t@(s,_,_) <- toks ]
-  dict <- getDict flags tokSet
+  dict <- getDict flags $ Just tokSet
   let langConf = case [f | Lang f <- flags ] of { [] -> "xx" ; [f] -> f }
       lex = Conf { dictLex = dict
                  , lang = langConf }
@@ -172,7 +248,7 @@ toksToForms toks = map (map (\ (f,_,_) ->[Str f]))
 parseSents :: String -> [[Models.Tok a]]
 parseSents  = splitWith null . map (map Str) . map words . lines
 
-getDict :: [Flag] -> Set.Set String -> IO Lexicon
+getDict :: [Flag] -> Maybe (Set.Set String) -> IO Lexicon
 getDict flags tokSet = do
   case [f | DictFile f <- flags ] of
     [f] -> do 
@@ -222,7 +298,7 @@ getEval flags trainf goldf testf = do
 eval flags [trainf,goldf,testf] = do
   (train,gold,test,baseline) <- fmap (\ (tr, g, t, b) -> (tr,toks g, toks t, fmap toks b)) (getEval flags trainf goldf testf)
   let seen = Set.fromList (map tokenForm train)
-  dict  <- getDict flags seen
+  dict  <- undefined --getDict flags . Just $ seen
   let isUnseen (form,_,_) = not (form `Set.member` seen)
       isUnseenInDict (form,_,_) = not (lowercase form `Map.member` dict)
       isUnseenBoth x = isUnseen x && isUnseenInDict x

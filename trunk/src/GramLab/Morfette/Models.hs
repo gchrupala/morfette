@@ -4,6 +4,7 @@ module GramLab.Morfette.Models ( train
                                , predictPipeline
                                , toModelFun
                                , mkPreprune
+                               , sentToExamples
                                , FeatureSpec (..)
                                , Smth(..)
                                , Tok
