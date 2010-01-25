@@ -235,6 +235,7 @@ train (prepr,_) fspecs flags [dat,modeldir] = do
                              $ zip [i_p,i_l] fspecs) 
             $ sentences
   B.writeFile (modelFile modeldir) (encode models)
+  saveConf (confFile modeldir) lex
   saveMwes (mweFile modeldir) mwes
 
 toksToSentences :: (Token -> Models.Tok a) -> [Token] -> [[Models.Tok a]]
@@ -298,7 +299,7 @@ getEval flags trainf goldf testf = do
 eval flags [trainf,goldf,testf] = do
   (train,gold,test,baseline) <- fmap (\ (tr, g, t, b) -> (tr,toks g, toks t, fmap toks b)) (getEval flags trainf goldf testf)
   let seen = Set.fromList (map tokenForm train)
-  dict  <- undefined --getDict flags . Just $ seen
+  dict  <- getDict flags . Just $ seen
   let isUnseen (form,_,_) = not (form `Set.member` seen)
       isUnseenInDict (form,_,_) = not (lowercase form `Map.member` dict)
       isUnseenBoth x = isUnseen x && isUnseenInDict x
