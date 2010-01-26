@@ -170,6 +170,7 @@ learn rate bounds@((lo,_),(hi,_)) span ws xys = MC m
                  modifySTRef c (+1)
               finalParams (c, params,  params_a)
               return params
+
 update :: Float 
        -> (STRef s Int, DenseVectorST s (Y,I), DenseVectorST s (Y,I))
        -> [Y] 

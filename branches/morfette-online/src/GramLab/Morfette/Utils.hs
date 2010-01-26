@@ -220,7 +220,13 @@ learn (prepr,_) fspecs flags [modeldir] = do
 
   T hi_f _ <- fmap decode (B.readFile $ featMapFile modeldir)
              :: IO (Table (Int, Maybe String))
-  (ws,xys) <- fmap (unzip . map parse . lines ) getContents
+  (ws,xys) <- fmap (unzip 
+                    . concat 
+                    . take 3 
+                    . repeat 
+                    . map parse 
+                    . lines ) 
+              getContents
   let rate = 0.1
       checker = \key y -> True
       bounds = ((0,0),(hi_c-1,hi_f-1))
