@@ -12,7 +12,7 @@ Author:		Grzegorz Chrupała
 Maintainer:	Grzegorz Chrupała <gchrupala@lsv.uni-saarland.de>
 build-type:     Simple
 category:       Natural Language Processing
-Extra-source-files:	README, src/INSTALL, src/README
+Extra-source-files: README, INSTALL
 
 Executable:     morfette
 Main-Is:        Main.hs
