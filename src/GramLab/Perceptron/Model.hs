@@ -141,10 +141,6 @@ distribution m ys fs = fromAssoc $ map (\(k,v) -> (origClass k,v)) dist
 
 classify m ys = fst . head . distribution m ys
 
-instance (Ord a, B.Binary a) => B.Binary (Table a) where
-    put (T i m) = B.put i >> B.put m
-    get = liftM2 T B.get B.get
-
 instance (Ord lab, Ord key, Ord sym,
           B.Binary lab, 
           B.Binary key, 

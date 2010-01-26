@@ -4,6 +4,7 @@ module GramLab.Perceptron.Multiclass
     ( Model
     , bounds
     , train
+    , learn
     , decode
     , distribution
     )
@@ -82,17 +83,122 @@ distribution (MC w) ys x =
         fxs = map ((w`dot`) . phi x) ys
     in reverse . map swap . sort $ zip (softmax fxs) ys
 
+checker w x = True
+type Key = String
+learn1 :: Float 
+      -> ((Y,I),(Y,I))
+      -> Int
+      -> [Key]
+      -> [(X,Y)]
+      -> Model
+learn1 rate bounds@((lo,_),(hi,_)) span ws xys = 
+      MC 
+    . runSTUArray 
+    $ do 
+                                                    -- initialization --
+      m@(c,params,params_a) <- liftM3 (,,) (newSTRef 1)
+                                           (newArray bounds 0)
+                                           (newArray bounds 0)
+      rsref <- newSTRef ([]::[Bool])
+      for_ (zip3 [1..] ws xys) $ \(i,w,(x,y)) -> do   -- update loop --
+        let ys = filter (checker w) [ lo .. hi ]
+        r <- update rate m ys x y 
+
+{-        params' <- unsafeFreeze params
+        let y'= decode (MC params') ys x
+            phi_xy = phi x y
+            phi_xy' = phi x y'
+        when (y' /= y) $ do 
+          params `plus_` (phi_xy `scale` rate)
+          params `plus_` (phi_xy' `scale` (rate * (-1)))
+          c' <- readSTRef c
+          params_a `plus_` (phi_xy `scale` (rate * fromIntegral c'))
+          params_a `plus_` (phi_xy' `scale` (rate * (-1) * fromIntegral c'))
+        modifySTRef c (+1)
+        let r = y' /= y
+-}
+        modifySTRef rsref (take span . (r:))
+        when (i`rem`span == 0) $ do
+          rs <- readSTRef rsref
+          let err :: Double
+              err = (fromIntegral . sum . map fromEnum) rs 
+                    / fromIntegral (length rs)
+          runLogger $ hPutStrLn stderr
+                    $ printf "Step %d, example %d: error: %2.4f" 
+                             (i`div`span) i err
+                                                    -- termination --
+      finalParams (c, params,  params_a)
+      return params
+
+learn :: Float 
+      -> ((Y,I),(Y,I))
+      -> Int
+      -> [Key]
+      -> [(X,Y)]
+      -> Model
+learn rate bounds@((lo,_),(hi,_)) span ws xys = MC m  
+  where m = runSTUArray $ do
+              trace (show bounds) () `seq` return ()
+              params <- newArray bounds 0
+              params_a <- newArray bounds 0
+              c <- newSTRef 1
+              let ys = [lo..hi]
+                  ixys = zip [1..] xys
+              eref <- newSTRef (0::Int)
+              for_ ixys $ \ (i,(x,y)) -> do
+                 params' <- unsafeFreeze params
+                 let ys' = ys -- [ y | y <- ys , yss A.! (i,y) ] 
+                     y'= decode (MC params') ys' x
+                     phi_xy = phi x y
+                     phi_xy' = phi x y'
+                 when (y' /= y) $ do
+                        modifySTRef eref (+1)
+                        params `plus_` (phi_xy `scale` rate)
+                        params `plus_` (phi_xy' `scale` (rate * (-1)))
+                        c' <- readSTRef c
+                        params_a `plus_` (phi_xy `scale` (rate * fromIntegral c'))
+                        params_a `plus_` (phi_xy' `scale` (rate * (-1) * fromIntegral c'))
+             
+                 when (i`rem`span == 0) $ do
+                     e <- readSTRef eref
+                     writeSTRef eref 0
+                     let err :: Double
+                         err = fromIntegral e / fromIntegral span
+                     unsafeIOToST $ hPutStrLn stderr
+                                  $ printf "Step %d, example %d: error: %2.4f" 
+                                      (i`div`span) i err
+                 modifySTRef c (+1)
+              finalParams (c, params,  params_a)
+              return params
+update :: Float 
+       -> (STRef s Int, DenseVectorST s (Y,I), DenseVectorST s (Y,I))
+       -> [Y] 
+       -> X
+       -> Y
+       -> ST s Bool
+update rate (c,params,params_a) ys x y = do
+      params' <- unsafeFreeze params
+      let y'= decode (MC params') ys x
+          phi_xy = phi x y
+          phi_xy' = phi x y'
+      when (y' /= y) $ do 
+        params `plus_` (phi_xy `scale` rate)
+        params `plus_` (phi_xy' `scale` (rate * (-1)))
+        c' <- readSTRef c
+        params_a `plus_` (phi_xy `scale` (rate * fromIntegral c'))
+        params_a `plus_` (phi_xy' `scale` (rate * (-1) * fromIntegral c'))
+      modifySTRef c (+1)
+      let !r = y' /= y
+      return r
 iter ::    Float
-        -> A.UArray (Int,Int) Bool
+        -> [Y] --A.UArray (Int,Int) Bool
         -> [(X, Y)]
         -> (STRef s Int, DenseVectorST s (Y,I), DenseVectorST s (Y,I))
         -> ST s ()
-iter rate yss ss (c,params,params_a) = do
-    let ((_,lo),(_,hi)) = A.bounds yss
-        ys = [lo..hi]
+iter rate ys ss (c,params,params_a) = do
     for_ (zip [0..] ss) $ \ (i,(x,y)) -> do
       params' <- unsafeFreeze params
-      let ys' = [ y | y <- ys , yss A.! (i,y) ] 
+      let ys' = ys -- [ y | y <- ys , yss A.! (i,y) ] 
           y'= decode (MC params') ys' x
           phi_xy = phi x y
           phi_xy' = phi x y'
@@ -120,7 +226,7 @@ train rate epochs bounds yss xys =  MC m
                   ((_,lo),(_,hi)) = A.bounds yss
                   ys = [lo..hi]
               for_ [1..epochs] $ 
-                     \i -> do iter rate yss xys (c,params,params_a)
+                     \i -> do iter rate {- yss -} ys xys (c,params,params_a)
                               c' <- readSTRef c
                               params' <- unsafeFreeze params
                               params_a' <- unsafeFreeze params_a
@@ -140,6 +246,7 @@ train rate epochs bounds yss xys =  MC m
                                   $ printf "Iteration %d: error: %2.4f" i err 
               finalParams (c, params,  params_a)
               return params
+
 
 finalParams :: (STRef s Int, DenseVectorST s (Y,I), DenseVectorST s (Y,I))
             -> ST s ()

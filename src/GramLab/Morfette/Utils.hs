@@ -37,6 +37,9 @@ import GramLab.Morfette.Evaluation
 import GramLab.Morfette.Settings.Defaults
 import GramLab.Intern (Table(..),intern,initial,runState,evalState)
 import GramLab.FeatureSet (toFeatureSet,FeatureSet)
+import qualified GramLab.Perceptron.Multiclass as Perceptron
+import System.IO.Unsafe (unsafeInterleaveIO)
+
 import Debug.Trace
 
 data Flag = ModelPrefix String
@@ -76,6 +79,10 @@ commands fs fspecs = [
                                        "iterations for Lemma model"
                           ] 
               [ "TRAIN-FILE", "MODEL-DIR" ])
+           , ("learn" , CommandSpec (learn fs fspecs)
+                          "train models"
+                          [ ]
+              [ "MODEL-DIR" ])
            , ("extract-features", CommandSpec (extractFeatures fs fspecs)
                                 "extract features"
                                 [  Option [] ["dict-file"] 
@@ -141,11 +148,14 @@ predict (_,format) fspecs flags [modelprefix] = do
            . getToks flags mwes
            $ txt
 
-confFile       dir = dir </> "conf.model"
-mweFile        dir = dir </> "mwe.model" 
-modelFile      dir = dir </> "models.model"
-classMapFile   dir = dir </> "classmap.model"
-featMapFile    dir = dir </> "featmap.model"
+confFile       dir = dir </> "conf.dat"
+mweFile        dir = dir </> "mwe.dat" 
+modelFile      dir = dir </> "models.dat"
+classMapFile   dir = dir </> "classmap.dat"
+featMapFile    dir = dir </> "featmap.dat"
+lemmaModelFile dir = dir </> "lemma.dat"
+posModelFile   dir = dir </> "pos.dat"
+exampleFile    dir = dir </> "examples.dat"
 
 defaultGaussianPrior = 1
 
@@ -174,19 +184,52 @@ extractFeatures (prepr,fmt) [fspos,fslem] flags [modeldir] = do
          . concatMap (Models.sentToExamples fs)
          . toksToSentences prepr 
          $ toks 
-  putStr . unlines 
-             . map format
+  createDirectoryIfMissing True modeldir
+  B.writeFile (exampleFile modeldir)
+             . encode
+             . listToChunks 100
              . zip ws
+             . map (\(x,y) -> (zip (IntMap.keys x) $ repeat (1::Float),y))
              $ xys
+  saveConf (confFile modeldir) lex
   B.writeFile (classMapFile modeldir) . encode $ ym
   B.writeFile (featMapFile modeldir) . encode $ xm
 
-format :: (String,(IntMap.IntMap Double,Int)) -> String
+
+data Seq a = Nil | Cons a (Seq a) 
+seqToList Nil = []
+seqToList (Cons x xs) = x : seqToList xs
+listToSeq [] = Nil
+listToSeq (x:xs) = Cons x $ listToSeq xs
+
+instance (Binary a,Eq a) => Binary (Seq a) where
+    put Nil = lazyPut (0::Word8)
+    put (Cons x xs) = lazyPut (1::Word8) >> lazyPut x >> lazyPut xs
+    get = do t <- lazyGet
+             case t::Word8 of
+                0 -> return Nil
+                1 -> do x <- lazyGet
+                        x == x `seq` return ()
+                        liftM (Cons x) lazyGet
+
+lazyPut :: (Binary a) => a -> Put
+lazyPut a = put (encode a)
+
+lazyGet :: (Binary a) => Get a
+lazyGet = fmap decode get
+
+listToChunks :: Int -> [a] -> Seq [a]
+listToChunks s = listToSeq . splitInto s
+
+chunksToList :: Seq [a] -> [a]
+chunksToList = concat . seqToList
+
+format :: (String,([(Int,Float)],Int)) -> String
 format (w,(x,y)) = unwords (w:show y : [ show i ++ ":" ++ show n 
-                                       | (i,n) <- IntMap.toList x ])
-parse :: String -> (String,(IntMap.IntMap Double,Int))
+                                       | (i,n) <- x ])
+parse :: String -> (String,([(Int, Float)],Int))
 parse s = case words s of
-            (w:y:x) -> (w,( IntMap.fromList [ (read i,read xi) 
+            (w:y:x) -> (w,( [ (read i,1) 
                                          | ixi <- x
                                        , let [i,xi] = splitOn ':' ixi
                                        ]
@@ -199,6 +242,24 @@ convertFeatures xys =
         (ys',ym) = flip runState initial . mapM intern $ ys
     in (xm,ym,zip xs' ys')
 
+
+learn (prepr,_) fspecs flags [modeldir] = do
+  T hi_c cm <- fmap decode (B.readFile $ classMapFile modeldir) 
+              :: IO (Table (Smth String))
+
+  T hi_f _ <- fmap decode (B.readFile $ featMapFile modeldir)
+             :: IO (Table (Int, Maybe String))
+  (ws,xys) <- fmap (unzip . chunksToList . decode) 
+                      . B.readFile 
+                      . exampleFile 
+                     $ modeldir
+  let rate = 0.1
+      checker = \key y -> True
+      bounds = ((0,0),(hi_c-1,hi_f-1))
+      span = 168803
+  let model = Perceptron.learn rate bounds span  ws xys
+--  B.writeFile (posModelFile modeldir) . encode $ model
+  putStr . unlines . zipWith (\a b -> show (a,b)) ws $ xys
 
 train  :: (Ord a, Show a, Binary a) =>
      (Token -> Models.Tok a, t)

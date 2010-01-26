@@ -15,6 +15,7 @@ import Prelude hiding (mapM)
 import qualified Data.Map as Map
 import Control.Monad.State hiding (mapM)
 import Data.Traversable (mapM)
+import qualified Data.Binary as B
 
 data Table a = T !Int (Map.Map a Int) deriving (Eq,Read,Show)
 
@@ -57,3 +58,7 @@ unintern i = do
   return $ case Map.lookup i m of { Just x -> x }
 
 uninternMany = mapM unintern
+
+instance (Ord a, B.Binary a) => B.Binary (Table a) where
+    put (T i m) = B.put i >> B.put m
+    get = liftM2 T B.get B.get
