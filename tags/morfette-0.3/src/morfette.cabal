@@ -1,0 +1,37 @@
+Name:		morfette
+Version:	0.3
+Homepage:	http://sites.google.com/site/morfetteweb/
+Synopsis:	A tool for supervised learning of morphology
+Description:	Morfette is a tool for supervised learning of inflectional
+		morphology. Given a corpus of sentences annotated with lemmas 
+		and morphological labels, and optionally a lexicon, morfette 
+		learns how to morphologically analyse new sentences.
+License:	BSD3
+License-file:   LICENSE
+Author:		Grzegorz Chrupała
+Maintainer:	Grzegorz Chrupała <gchrupala@lsv.uni-saarland.de>
+build-type:     Simple
+category:       Natural Language Processing
+Extra-source-files: README, INSTALL
+
+Executable:     morfette
+Main-Is:        Main.hs
+Other-Modules:  GramLab.Commands, GramLab.Morfette.LZipper, 
+		GramLab.Data.LCS.SimpleMemo, GramLab.Data.Diff.EditListRev,
+		GramLab.Data.Diff.EditList, GramLab.Data.StringLike,
+		GramLab.Data.CommonSubstrings, GramLab.Data.Diff.EditTree, 
+		GramLab.Morfette.BinaryInstances,		
+		GramLab.Morfette.Token, GramLab.Binomial, 
+		GramLab.Perceptron.Vector, GramLab.Data.Assoc,
+		GramLab.Intern, GramLab.Utils, GramLab.Perceptron.Multiclass,
+		GramLab.Perceptron.IntModel, GramLab.Morfette.Evaluation,
+		GramLab.Morfette.Lang.Conf, GramLab.Morfette.MWE,
+		GramLab.FeatureSet, GramLab.Perceptron.Model, 
+		GramLab.Morfette.Config, GramLab.Morfette.Models, 
+		GramLab.Morfette.Settings.Defaults, 
+		GramLab.Morfette.Features.Common, 
+		Lemma, POS, GramLab.Morfette.Utils
+Build-depends:	base >=3 && <=4 , containers, array, QuickCheck, mtl, 
+		directory, filepath, haskell98, pretty,
+		utf8-string, bytestring, binary
+cc-options:     -Wall 
