@@ -184,45 +184,16 @@ extractFeatures (prepr,fmt) [fspos,fslem] flags [modeldir] = do
          . concatMap (Models.sentToExamples fs)
          . toksToSentences prepr 
          $ toks 
+      
   createDirectoryIfMissing True modeldir
-  B.writeFile (exampleFile modeldir)
-             . encode
-             . listToChunks 100
+  putStr . unlines
+             . map format
              . zip ws
              . map (\(x,y) -> (zip (IntMap.keys x) $ repeat (1::Float),y))
              $ xys
   saveConf (confFile modeldir) lex
   B.writeFile (classMapFile modeldir) . encode $ ym
   B.writeFile (featMapFile modeldir) . encode $ xm
-
-
-data Seq a = Nil | Cons a (Seq a) 
-seqToList Nil = []
-seqToList (Cons x xs) = x : seqToList xs
-listToSeq [] = Nil
-listToSeq (x:xs) = Cons x $ listToSeq xs
-
-instance (Binary a,Eq a) => Binary (Seq a) where
-    put Nil = lazyPut (0::Word8)
-    put (Cons x xs) = lazyPut (1::Word8) >> lazyPut x >> lazyPut xs
-    get = do t <- lazyGet
-             case t::Word8 of
-                0 -> return Nil
-                1 -> do x <- lazyGet
-                        x == x `seq` return ()
-                        liftM (Cons x) lazyGet
-
-lazyPut :: (Binary a) => a -> Put
-lazyPut a = put (encode a)
-
-lazyGet :: (Binary a) => Get a
-lazyGet = fmap decode get
-
-listToChunks :: Int -> [a] -> Seq [a]
-listToChunks s = listToSeq . splitInto s
-
-chunksToList :: Seq [a] -> [a]
-chunksToList = concat . seqToList
 
 format :: (String,([(Int,Float)],Int)) -> String
 format (w,(x,y)) = unwords (w:show y : [ show i ++ ":" ++ show n 
@@ -249,17 +220,14 @@ learn (prepr,_) fspecs flags [modeldir] = do
 
   T hi_f _ <- fmap decode (B.readFile $ featMapFile modeldir)
              :: IO (Table (Int, Maybe String))
-  (ws,xys) <- fmap (unzip . chunksToList . decode) 
-                      . B.readFile 
-                      . exampleFile 
-                     $ modeldir
+  (ws,xys) <- fmap (unzip . map parse . lines ) getContents
   let rate = 0.1
       checker = \key y -> True
       bounds = ((0,0),(hi_c-1,hi_f-1))
       span = 168803
   let model = Perceptron.learn rate bounds span  ws xys
---  B.writeFile (posModelFile modeldir) . encode $ model
-  putStr . unlines . zipWith (\a b -> show (a,b)) ws $ xys
+  B.writeFile (posModelFile modeldir) . encode $ model
+
 
 train  :: (Ord a, Show a, Binary a) =>
      (Token -> Models.Tok a, t)
