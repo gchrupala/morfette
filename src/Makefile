@@ -34,13 +34,13 @@ train:
 	
 	
 eval_dev:
-	${MORFETTE} predict  ../DATA/${TRAINDATA}/ftb_1.i20x10.model < ../DATA/${TRAINDATA}/ftb_2.pos.utf8.morpheteready > ../DATA/${TRAINDATA}/ftb_2.pos.utf8.morpheteready.tagged
-	${MORETTE}  eval ../DATA/${TRAINDATA}/ftb_1.i20x10.model ../DATA/${TRAINDATA}/ftb_2.pos.utf8.morpheteready |\
+	#${MORFETTE} predict  ../DATA/${TRAINDATA}/ftb_1.i20x10.model < ../DATA/${TRAINDATA}/ftb_2.pos.utf8.morpheteready > ../DATA/${TRAINDATA}/ftb_2.pos.utf8.morpheteready.tagged
+	${MORFETTE}  eval ../DATA/${TRAINDATA}/ftb_1.i20x10.model ../DATA/${TRAINDATA}/ftb_2.pos.utf8.morpheteready ../DATA/${TRAINDATA}/ftb_2.pos.utf8.morpheteready |\
 	tee ../DATA/${TRAINDATA}/ftb_2.pos.utf8.morpheteready.result
 	
 	
 
 eval_gold:
 	${MORFETTE} predict  ../DATA/${TRAINDATA}/ftb_1.i20x10.model < ../DATA/${TRAINDATA}/ftb_3.pos.utf8.morpheteready > ../DATA/${TRAINDATA}/ftb_3.pos.utf8.morpheteready.tagged
-	${MORETTE}  eval ../DATA/${TRAINDATA}/ftb_1.i20x10.model ../DATA/${TRAINDATA}/ftb_3.pos.utf8.morpheteready |\
+	${MORFETTE}  eval ../DATA/${TRAINDATA}/ftb_1.i20x10.model ../DATA/${TRAINDATA}/ftb_3.pos.utf8.morpheteready ../DATA/${TRAINDATA}/ftb_3.pos.utf8.morpheteready |\
 	tee ../DATA/${TRAINDATA}/ftb_3.pos.utf8.morpheteready.result
