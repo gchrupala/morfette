@@ -209,7 +209,7 @@ train  :: (Ord a, Show a, Binary a) =>
 train (prepr,_) fspecs flags [dat,modeldir] = do
   toks <- fmap (map parseToken . lines) (readFile dat)
   let tokSet = Set.fromList [ s | t@(s,_,_) <- toks ]
-  dict <- getDict flags $ Just tokSet
+  dict <- getDict flags Nothing
   let langConf = case [f | Lang f <- flags ] of { [] -> "xx" ; [f] -> f }
       lex = Conf { dictLex = dict
                  , lang = langConf }
