@@ -11,6 +11,8 @@ import GramLab.Data.CommonSubstrings
 import qualified GramLab.Data.StringLike as S
 import Data.Maybe (fromMaybe)
 import Debug.Trace
+import Data.Binary
+import Control.Monad (liftM2,liftM4)
 
 make = editTree
 
@@ -50,3 +52,13 @@ check (Split i j lt rt) w  =      len >= i
     where len = S.length w 
           (w_pre,w_root,w_suf) = split3 w i j
 
+
+instance Binary s => Binary (EditTree s a) where
+    put (Replace xs ys)  = put (0::Word8) >> put xs >> put ys
+    put (Split i j lt rt) = put (1::Word8) >> put i >> put j 
+                            >> put lt >> put rt
+    get = do
+      tag <- get
+      case tag::Word8 of
+        0 -> liftM2 Replace get get
+        1 -> liftM4 Split   get get get get

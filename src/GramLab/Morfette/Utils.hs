@@ -29,7 +29,6 @@ import Text.Printf
 import qualified Data.List as List
 import Data.Char
 import GramLab.Morfette.Lang.Conf
-import GramLab.Morfette.BinaryInstances
 import Data.Binary
 import qualified Data.ByteString.Lazy as B
 import qualified GramLab.Morfette.Config as C
