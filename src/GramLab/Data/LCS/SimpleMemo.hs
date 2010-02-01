@@ -2,7 +2,6 @@
 -- Memoized version of Simple.hs [1] but still simple stupid and slow. 
 -- foldlcs lcs and ses adapted from Gauche's util.lcs module [2]
 -- [1] http://urchin.earth.li/darcs/ian/lcs/Data/List/LCS/Simple.hs
-{-# OPTIONS -fglasgow-exts #-}
 -- [2] http://www.shiro.dreamhost.com/scheme/gauche/memo.html
 module GramLab.Data.LCS.SimpleMemo ( Edit (Ins,Del)
                                    , EditScript
@@ -20,7 +19,7 @@ import Prelude hiding (lookup)
 import Maybe (catMaybes)
 import Debug.Trace
 data Edit a       = Ins a Int
-                  | Del a Int deriving (Eq,Ord,Show,Read,Typeable)
+                  | Del a Int deriving (Eq,Ord,Show,Read)
 type EditScript a = [Edit a]
 
 -- |The 'lcs' function takes two lists and returns a list with a longest
