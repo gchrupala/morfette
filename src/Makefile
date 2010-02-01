@@ -14,7 +14,7 @@ check: train
 configure:
 	runghc Setup.lhs configure --user
 
-build:
+build: configure
 	runghc Setup.lhs build
 	
 install:
