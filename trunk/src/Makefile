@@ -1,14 +1,30 @@
 defaults: all
 
 
+#program name
 MORFETTE=../src/dist/build/morfette/morfette
-TRAINDATA=ftb4
- #put ftbmax if you want to train for ftbmax tagset
+
+
+#parameters for training and eval
+# modify to suit your needs
+# for french TYPE can be either ftb4 or ftbmax
+
+TYPE=ftb4
+TRAINDATADIR=../DATA/
+PREF=${TRAINDATADIR}/${TYPE}
+TRAINSET=${PREF}/ftb_1.pos.utf8.morpheteready
+DEVSET=${PREF}/ftb_2.pos.utf8.morpheteready
+GOLDSET=${PREF}/ftb_3.pos.utf8.morpheteready
+
+LEXICON=${TRAINDATADIR}/lexicon/lexicon.ftb4.4morfette.csv
+ITERPOS=5
+ITERLEMMA=2
+MODELNAME=${PREF}/${TYPE}.${ITERPOS}x${ITERLEMMA}.model
 
 all: configure build
 		
 	
-check: train
+check: train eval_dev
 
 
 configure:
@@ -28,19 +44,20 @@ clean:
 
 
 train:
-	${MORFETTE} train --iter-pos=20 --iter-lemma=10 \
-	../DATA/${TRAINDATA}/ftb_1.pos.utf8.morpheteready ../DATA/${TRAINDATA}/ftb_1.i20x10.model \
-	--dict=../DATA/lexicon/lexicon.ftb4.4morfette.csv +RTS -K100m -sstderr
+	${MORFETTE} train --iter-pos=${ITERPOS} --iter-lemma=${ITERLEMMA} \
+	${TRAINSET} ${MODELNAME} \
+	--dict=${LEXICON} +RTS -K100m -sstderr
 	
 	
 eval_dev:
-	#${MORFETTE} predict  ../DATA/${TRAINDATA}/ftb_1.i20x10.model < ../DATA/${TRAINDATA}/ftb_2.pos.utf8.morpheteready > ../DATA/${TRAINDATA}/ftb_2.pos.utf8.morpheteready.tagged
-	${MORFETTE}  eval ../DATA/${TRAINDATA}/ftb_1.i20x10.model ../DATA/${TRAINDATA}/ftb_2.pos.utf8.morpheteready ../DATA/${TRAINDATA}/ftb_2.pos.utf8.morpheteready |\
-	tee ../DATA/${TRAINDATA}/ftb_2.pos.utf8.morpheteready.result
+	${MORFETTE} predict  ${MODELNAME} < ${DEVSET} > ${DEVSET}.tagged
+	${MORFETTE}  eval --ignore-case ${TRAINSET} ${DEVSET} ${DEVSET}.tagged |\
+	tee ${DEVSET}.tagged.result.${TYPE}.${ITERPOS}x${ITERLEMMA}.model
 	
 	
 
 eval_gold:
-	${MORFETTE} predict  ../DATA/${TRAINDATA}/ftb_1.i20x10.model < ../DATA/${TRAINDATA}/ftb_3.pos.utf8.morpheteready > ../DATA/${TRAINDATA}/ftb_3.pos.utf8.morpheteready.tagged
-	${MORFETTE}  eval ../DATA/${TRAINDATA}/ftb_1.i20x10.model ../DATA/${TRAINDATA}/ftb_3.pos.utf8.morpheteready ../DATA/${TRAINDATA}/ftb_3.pos.utf8.morpheteready |\
-	tee ../DATA/${TRAINDATA}/ftb_3.pos.utf8.morpheteready.result
+	${MORFETTE} predict  ${MODELNAME} < ${GOLDSET} > ${GOLDSET}.tagged
+	${MORFETTE}  eval --ignore-case ${TRAINSET} ${GOLDSET} ${GOLDSET}.tagged |\
+	tee ${GOLDSET}.tagged.result.${TYPE}.${ITERPOS}x${ITERLEMMA}.model
+	
