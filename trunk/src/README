@@ -1,9 +1,11 @@
 =INTRODUCTION=
 
+Morfette website: http://sites.google.com/site/morfetteweb/
+
 Morfette is a tool for supervised learning of inflectional
 morphology. Given a corpus of sentences annotated with lemmas 
 and morphological labels, and optionally a lexicon, morfette 
-learns how to morphologically analyse new sentences.
+learns how to morphologically analyse new sentences. 
 
 In the learning stage Morfette fits two separate logistic regression
 models: one for morphological tagging and one for lemmatization. The
@@ -55,7 +57,7 @@ eval [OPTION...] TRAIN-FILE GOLD-FILE TEST-FILE
 
 =EXAMPLE USAGE=
 To train a new model:
-morfette train --dict-file=DICT TRAINING-FILE MODEL-DIR
+morfette train --dict-file=DICT TRAINING-FILE MODEL-DIR +RTS -K100m
 
 To use the model in MODEL-DIR to analyze new data:
 morfette predict MODEL-DIR < TEST-DATA > ANALYZED-TEST-DATA
