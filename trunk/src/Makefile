@@ -12,16 +12,16 @@ check: train
 
 
 configure:
-	runghc Setup.py configure --user
+	runghc Setup.lhs configure --user
 
 build:
-	runghc Setup.py build
+	runghc Setup.lhs build
 	
 install:
-	runghc Setup.py install
+	runghc Setup.lhs install
 	
 clean:
-	runghc Setup.py clean
+	runghc Setup.lhs clean
  
 
 
