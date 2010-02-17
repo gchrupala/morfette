@@ -1,4 +1,4 @@
-#/usr/bin/perl
+#!/usr/bin/perl
 
 # this script takes a ftbX.pos files (as generated from the xml orginal data) and convert it to the morfette's input format
 #  usage  : cat ftb_1.pos | convertFTBpos_to_morfette.pl | iconv -f latin1 -t utf8 > ftb_1.pos.morfetteready
