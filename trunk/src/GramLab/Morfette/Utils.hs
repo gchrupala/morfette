@@ -7,8 +7,9 @@ module GramLab.Morfette.Utils ( train
 where
 import Prelude hiding (print,getContents,putStrLn,putStr
                       ,writeFile,readFile)
-import System.IO (stderr,stdout)
-import System.IO.UTF8
+import System.IO (stderr,stdout,stdin,hSetBinaryMode)
+import System.IO.UTF8 hiding (getContents,print,putStr,putStrLn)
+import qualified System.IO.UTF8 as UTF8
 import GramLab.Commands
 import qualified GramLab.Morfette.Models as Models
 import GramLab.Morfette.Models (Smth(..))
@@ -329,3 +330,11 @@ filterZip :: [Bool] -> [a] -> [a]
 filterZip xs ys = catMaybes $ zipWith (\b x -> if b then Just x else Nothing) xs ys
     
 
+getContents :: IO String
+getContents = hSetBinaryMode stdin True >> UTF8.getContents
+              
+putStr :: String -> IO ()
+putStr s = hSetBinaryMode stdout True >> UTF8.putStr s
+
+putStrLn :: String -> IO ()
+putStrLn s = hSetBinaryMode stdout True >> UTF8.putStrLn s

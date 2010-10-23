@@ -5,7 +5,7 @@ defaults: all
 
 
 #program name
-MORFETTE=../src/dist/build/morfette/morfette
+MORFETTE=dist/build/morfette/morfette
 
 
 #parameters for training and eval
@@ -13,7 +13,7 @@ MORFETTE=../src/dist/build/morfette/morfette
 # for french TYPE can be either ftb4 or ftbmax
 
 TYPE=ftb4
-TRAINDATADIR=../DATA/
+TRAINDATADIR=DATA/
 PREF=${TRAINDATADIR}/${TYPE}
 TRAINSET=${PREF}/ftb_1.pos.utf8.morpheteready
 DEVSET=${PREF}/ftb_2.pos.utf8.morpheteready
