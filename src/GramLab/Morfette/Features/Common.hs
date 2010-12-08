@@ -16,17 +16,15 @@ module GramLab.Morfette.Features.Common ( spellingSpec
 where
 import GramLab.Morfette.Token 
 import GramLab.Morfette.LZipper(LZipper)
-import GramLab.FeatureSet(FeatureSet)
+import GramLab.FeatureSet
 import Data.Char
 import Data.List
-import GramLab.FeatureSet
 import GramLab.Utils (padRight)
 import Data.Binary
 import Control.Monad (liftM,liftM2)
 import GramLab.Morfette.Settings.Defaults
 import GramLab.Morfette.Models
 import GramLab.Morfette.LZipper
-import GramLab.FeatureSet
 import GramLab.Morfette.Lang.Conf
 
 mapSym f (Sym s) = Sym (f s)
