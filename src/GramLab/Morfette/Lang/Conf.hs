@@ -1,4 +1,5 @@
 module GramLab.Morfette.Lang.Conf ( Lexicon
+                                  , ClusterDict
                                   , Conf(..)
                                   , Lang 
                                   , makeConf
@@ -6,6 +7,7 @@ module GramLab.Morfette.Lang.Conf ( Lexicon
                                   , saveConf
                                   , readConf
                                   , parseLexicon
+                                  , parseClusterDict
                                   , splitPOS
                                 )
 where
@@ -22,15 +24,19 @@ import qualified Control.Monad.State as S
     
 type Lang = String
 type Lexicon = Map.Map String [(String, String)]
+type ClusterDict = Map.Map String String
+
 data Conf = Conf { dictLex  :: Lexicon
+                 , clusterDict :: ClusterDict 
                  , lang     :: Lang } deriving (Eq)
 
 instance Binary Conf where
-    put (Conf x y) = put x >> put y
+    put (Conf x y z) = put x >> put y >> put z
     get = do
       x <- get
       y <- get
-      return (Conf x y)
+      z <- get
+      return (Conf x y z)
 
 emptyLexicon = Map.empty
 
@@ -45,6 +51,11 @@ readConf :: FilePath -> IO Conf
 readConf path = do
   txt <- BS.readFile path
   return (Binary.decode txt)
+
+parseClusterDict :: String -> ClusterDict
+parseClusterDict =   Map.fromList 
+                 . map (\ln -> let [w,c] = words ln in (w,c)) 
+                 . lines             
 
 parseLexicon :: Maybe (Set.Set String) -> String -> Lexicon 
 parseLexicon toks = 

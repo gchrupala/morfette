@@ -30,12 +30,18 @@ theFeatures global tic = let prev = getSome  leftCtx   (left tic)
           leftFeatures  Nothing                         = [Null , Null , Null]
           focusFeatures (Just (Str form:_))         = [ Sym $ low form 
                                                       , Sym $ spellingSpec form 
-                                                      , lexmap (low form) ]
+                                                      , lexmap (low form) 
+                                                      , cluster form
+                                                      ]
                                                       ++ prefixes maxPrefix (low form)
                                                       ++ suffixes maxSuffix (low form)
           rightFeatures (Just (Str form:_)) = [Sym (low form),lexmap (low form)]
           rightFeatures Nothing     = [Null, Null]
           low = lowercase
           lexmap w = Set $ map snd $ Map.findWithDefault [] w (dictLex global)
+          cluster w = case Map.lookup w (clusterDict global) of
+                        Nothing -> Null
+                        Just c  -> Sym c
+                        
           getpos Nothing = ""
           getpos (Just (Str form:Str label:_)) = head (splitPOS (lang global) label)
