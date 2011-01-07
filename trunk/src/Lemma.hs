@@ -28,12 +28,16 @@ theFeatures  global tic = focusFeatures     (focus tic)
     where focusFeatures (Just (Str form:Str label:_)) = [ Sym $ low form, Sym $ label
                                                         , Sym $ spellingSpec form
                                                         , lexmap (low form)
+                                                        , cluster form
                                                 ]
                                               ++ prefixes maxPrefix (low form)
                                               ++ suffixes maxSuffix (low form)
           focusFeatures other = error $ "Lemma.theFeatures: " ++ show other
           low = lowercase
           lexmap w = Set $ map (show . make w . fst) $ Map.findWithDefault [] w (dictLex global)
+          cluster w = case Map.lookup w (clusterDict global) of
+                        Nothing -> Null
+                        Just c  -> Sym c
 
 decode str = case reads str of
                [(s,"")] -> s

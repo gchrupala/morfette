@@ -44,6 +44,7 @@ data Flag = ModelPrefix String
           | BeamSize Int 
           | IgnoreCase
           | DictFile FilePath
+          | ClusterFile FilePath
           | BaselineFile FilePath
           | Lang Lang
           | Gaussian Double
@@ -74,6 +75,9 @@ commands fs fspecs = [
                           , Option [] ["iter-lemma"] 
                                        (ReqArg (IterLemma . read) "NUM")
                                        "iterations for Lemma model"
+                          , Option [] ["cluster-file"]
+                                       (ReqArg ClusterFile "PATH")
+                                        "path to optional cluster file"
                           ] 
               [ "TRAIN-FILE", "MODEL-DIR" ])
            , ("extract-features", CommandSpec (extractFeatures fs fspecs)
@@ -158,8 +162,10 @@ extractFeatures  :: (Ord a,Binary a,Show a) =>
 extractFeatures (prepr,fmt) [fspos,fslem] flags [modeldir] = do
   dict <- getDict flags Nothing
   --  dict == dict `seq` return ()
+  clusters <- getClusters flags
   let langConf = case [f | Lang f <- flags ] of { [] -> "xx" ; [f] -> f }
       lex = Conf { dictLex = dict
+                 , clusterDict = clusters
                  , lang = langConf }
       fs = case [f | ModelId f <- flags ] of
               ["pos"]   -> fspos lex
@@ -210,8 +216,10 @@ train (prepr,_) fspecs flags [dat,modeldir] = do
   toks <- fmap (map parseToken . lines) (readFile dat)
   let tokSet = Set.fromList [ s | t@(s,_,_) <- toks ]
   dict <- getDict flags Nothing
+  clusters <- getClusters flags
   let langConf = case [f | Lang f <- flags ] of { [] -> "xx" ; [f] -> f }
       lex = Conf { dictLex = dict
+                 , clusterDict = clusters
                  , lang = langConf }
       mwes = mweSet toks
       g = case [f | EntropyTh f <- flags ] of 
@@ -252,10 +260,14 @@ parseSents  = splitWith null . map (map Str) . map words . lines
 getDict :: [Flag] -> Maybe (Set.Set String) -> IO Lexicon
 getDict flags tokSet = do
   case [f | DictFile f <- flags ] of
-    [f] -> do 
-            d <- fmap (parseLexicon tokSet)  $ readFile f
-            return d
+    [f] -> fmap (parseLexicon tokSet)  $ readFile f
     [] -> return emptyLexicon
+
+getClusters :: [Flag] -> IO ClusterDict
+getClusters flags = do
+  case [f | ClusterFile f <- flags ] of
+    [f] -> fmap parseClusterDict $ readFile f
+    [] -> return Map.empty
 
 getToks :: [Flag] -> [[String]] -> String -> [Token]
 getToks flags mwes text = 
