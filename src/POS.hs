@@ -42,6 +42,5 @@ theFeatures global tic = let prev = getSome  leftCtx   (left tic)
           cluster w = case Map.lookup w (clusterDict global) of
                         Nothing -> Null
                         Just c  -> Sym c
-                        
           getpos Nothing = ""
           getpos (Just (Str form:Str label:_)) = head (splitPOS (lang global) label)

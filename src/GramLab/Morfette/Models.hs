@@ -13,7 +13,7 @@ where
 import GramLab.Morfette.LZipper
 import qualified Data.Map as Map
 import Data.Map ((!))
-import Data.List (sortBy)
+import Data.List (sortBy,foldl',transpose)
 import Data.Ord (comparing)
 import Data.Dynamic
 import GramLab.FeatureSet
@@ -114,16 +114,17 @@ toModelFun fs m =
                   . features fs 
                   $ z 
            
-predict :: Int -> [Model a] -> [[Tok a]] -> [[Tok a]]
-predict beamSize models sents = map predictOne sents
-    where predictOne s = fst 
-                         . head 
+predict :: Int -> Int -> [Model a] -> [[Tok a]] -> [[[Tok a]]]
+predict k beamSize models sents = map predictK sents
+    where predictK s = transpose 
+                         . map fst 
+                         . take k
                          . beamSearch beamSize models 
                          $ [(fromList s,1)]
 
 predictPipeline :: Int -> [Model a] -> [[Tok a]] -> [[Tok a]]
-predictPipeline beamSize models sents = map predictOne sents
-    where predictOne s = foldl (\s1 m -> fst . head . beamSearch beamSize [m] 
+predictPipeline beamSize models sents = map predictK sents
+    where predictK s = foldl' (\s1 m -> fst . head . beamSearch beamSize [m] 
                                          $ [(fromList s1,1)]) s models
                                
 
