@@ -42,6 +42,7 @@ import Debug.Trace
 data Flag = ModelPrefix String
           | Eval
           | BeamSize Int 
+          | Multi Int
           | IgnoreCase
           | DictFile FilePath
           | ClusterFile FilePath
@@ -99,6 +100,9 @@ commands fs fspecs = [
                             , Option [] ["tokenize"] 
                                          (NoArg Tokenize)
                                          "tokenize input"
+                            , Option [] ["multi"]
+                                         (ReqArg (Multi . read) "+INT")
+                                         "n-best output"
                             ] 
                             [ "MODEL-DIR" ] )
            , ("eval" , CommandSpec eval 
@@ -135,9 +139,15 @@ predict (_,format) fspecs flags [modelprefix] = do
         defaultBeamSize = 3
         n = case [f | BeamSize f <- flags ] 
             of { [f] -> f ; _ -> defaultBeamSize }
+        k = case [f | Multi f <- flags ]
+            of { [f] -> f ; _ -> 1 }
         f = if Pipeline `elem` flags 
-            then Models.predictPipeline
-            else Models.predict
+            then if k /= 1 
+                 then error $  "GramLab.Morfette.Utils.predict: " 
+                            ++ "pipeline mode doesn't work with n-best output"
+                 else \ n ms -> map (map return) 
+                                  . Models.predictPipeline n ms 
+            else Models.predict k
     putStr . unlines 
            . map format 
            . f n models 
