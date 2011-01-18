@@ -7,12 +7,14 @@ module GramLab.Data.Diff.EditTree ( make
                                   )
 where
 
-import GramLab.Data.CommonSubstrings 
+--import GramLab.Data.CommonSubstrings 
+import Data.List
 import qualified GramLab.Data.StringLike as S
 import Data.Maybe (fromMaybe)
 import Debug.Trace
 import Data.Binary
 import Control.Monad (liftM2,liftM4)
+import Data.Function
 
 make = editTree
 
@@ -28,8 +30,8 @@ editTree w w' = case lcsi w w' of
                                 (editTree w_prefix  w'_prefix)
                                 (editTree w_suffix  w'_suffix)
 
-lcsi w w' = fmap f (lcs w w') 
-    where f (str,(i_w:_,i_w':_)) = (i_w,i_w_end,i_w',i_w'_end)
+lcsi w w' = fmap f (lcString w w') 
+    where f (str,(i_w,i_w')) = (i_w,i_w_end,i_w',i_w'_end)
               where i_w_end  = S.length w  - i_w  - len
                     i_w'_end = S.length w' - i_w' - len
                     len      = S.length str
@@ -62,3 +64,16 @@ instance Binary s => Binary (EditTree s a) where
       case tag::Word8 of
         0 -> liftM2 Replace get get
         1 -> liftM4 Split   get get get get
+
+
+lcString xs ys = 
+    case unzip . lcstr xs $ ys of
+    ([],_) -> fail "No common substring"
+    (i:is,j:_) -> return $ (map (xs!!) (i:is),(i,j))
+lcstr xs ys = maximumBy (compare `on` length) . concat . reverse
+              $  [f xs' ysi | xs' <- tails xsi ] 
+              ++ [f xsi ys' | ys' <- drop 1 . tails $ ysi ]
+  where f xs ys = scanl g [] $ zip xs ys
+        g z ((x,i), (y,j)) = if x == y then z ++ [(i,j)] else []
+        xsi = zip xs [0..]
+        ysi = zip ys [0..]
