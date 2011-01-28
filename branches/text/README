@@ -1,0 +1,117 @@
+=INTRODUCTION=
+
+Morfette website: http://sites.google.com/site/morfetteweb/
+
+Morfette is a tool for supervised learning of inflectional
+morphology. Given a corpus of sentences annotated with lemmas 
+and morphological labels, and optionally a lexicon, morfette 
+learns how to morphologically analyse new sentences. 
+
+In the learning stage Morfette fits two separate logistic regression
+models: one for morphological tagging and one for lemmatization. The
+predictions of the models are combined dynamically and produce a 
+globally plausible sequence of morphological-tag - lemma pairs for 
+a sentence.
+
+In Morfette lemmatization is cast as a classification task where a 
+a lemmatization class corresponds to the specification of the edit 
+operations which are needed to transform the inflected word form into
+the corresponding lemma.
+
+The basic approach is described in (Chrupala et al 2008 and Chrupala 2008). 
+The current version of Morfette uses an averaged perceptron to 
+fit the models, rather than Maximum Entropy training. The lemmatization 
+classes are Edit-Tree-based as described in (Chrupala 2008).
+
+=LICENSE= 
+The source code in the src directory is licensed under
+the BSD license.
+
+=INSTALLATION=
+Pre-built binaries are available from the project website. 
+If they don't work on your system you will
+need to build from source, using the GHC Haskell compiler. Build
+instructions are in [INSTALL]
+
+=USAGE=
+Usage: morfette command [OPTION...] [ARG...]
+train:    train models
+train [OPTION...] TRAIN-FILE MODEL-DIR 
+    --dict-file=PATH                      path to optional dictionary
+    --language-configuration=es|pl|tr|..  language configuration
+    --class-entropy-prune-threshold=NUM   class prune threshold
+
+predict:  predict postags and lemmas using saved model data
+predict [OPTION...] MODEL-DIR 
+    --beam=+INT  beam size to use
+    --tokenize   tokenize input
+
+eval:     evaluate morpho-tagging and lemmatization results
+eval [OPTION...] TRAIN-FILE GOLD-FILE TEST-FILE 
+    --ignore-case            ignore case for evaluation
+    --baseline-file=PATH     path to baseline results
+    --dict-file=PATH         path to optional dictionary
+    --ignore-punctuation     ignore punctuation for evaluation
+    --ignore-pos=POS-prefix  ignore POS starting with POS-prefix for evaluation
+
+
+=EXAMPLE USAGE=
+To train a new model:
+morfette train --dict-file=DICT TRAINING-FILE MODEL-DIR +RTS -K100m
+
+To use the model in MODEL-DIR to analyze new data:
+morfette predict MODEL-DIR < TEST-DATA > ANALYZED-TEST-DATA
+
+=DATA FORMAT=
+Morfette expects both training and testing data to be tokenized and
+split into sentences. The format of training data look like this:
+
+Gómez Gómez np0000p
+sostiene sostener vmip3s0
+que que cs
+la el da0fs0
+propuesta propuesta ncfs000
+no no rn
+cambiará cambiar vmif3s0
+. . Fp
+
+La el da0fs0
+propuesta propuesta ncfs000
+será ser vsif3s0
+la el da0fs0
+misma mismo pi0fs000
+
+
+There is one token per line, with three columns separated by spaces or
+tabs. The columns contain word form, lemma and morphological tag
+respectively. Sentences are separated by an empty line. Text should be
+encoded in UTF-8.
+
+Test data format is similar, except only the first column is needed:
+
+Gómez
+sostiene
+que
+la
+propuesta
+no
+cambiará
+.
+
+La
+propuesta
+será
+la
+misma
+
+
+=References=
+[1] Grzegorz Chrupala, Georgiana Dinu and Josef van Genabith. 2008.
+    Learning Morphology with Morfette. In Proceedings of LREC 2008.
+    http://www.lrec-conf.org/proceedings/lrec2008/pdf/594_paper.pdf
+
+[2] Grzegorz Chrupala. 2008. Towards a Machine-Learning Architecture
+    for Lexical Functional Grammar Parsing. Chapter 6. PhD
+    dissertation, Dublin City
+    University. 
+    http://www.lsv.uni-saarland.de/personalPages/gchrupala/papers/phd.pdf
