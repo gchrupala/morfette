@@ -22,15 +22,16 @@ Other-Modules:  GramLab.Commands, GramLab.Morfette.LZipper,
 		GramLab.Data.CommonSubstrings, GramLab.Data.Diff.EditTree, 
 		GramLab.Morfette.Token, GramLab.Binomial, 
 		GramLab.Perceptron.Vector, GramLab.Data.Assoc,
-		GramLab.Intern, GramLab.Utils, GramLab.Perceptron.Multiclass,
+		GramLab.Intern, GramLab.Perceptron.Multiclass,
 		GramLab.Perceptron.IntModel, GramLab.Morfette.Evaluation,
 		GramLab.Morfette.Lang.Conf, GramLab.Morfette.MWE,
 		GramLab.FeatureSet, GramLab.Perceptron.Model, 
 		GramLab.Morfette.Config, GramLab.Morfette.Models, 
 		GramLab.Morfette.Settings.Defaults, 
 		GramLab.Morfette.Features.Common, 
-		Lemma, POS, GramLab.Morfette.Utils
+		Lemma, POS, Aux.Text, Aux.Utils
 Build-depends:	base >=3 && <=5 , containers, array, mtl, 
 		directory, filepath, haskell98, pretty,
-		utf8-string, bytestring, binary, QuickCheck >= 2.3
+		utf8-string, bytestring, binary, QuickCheck >= 2.3,
+		text >= 0.10
 cc-options:     -Wall 

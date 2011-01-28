@@ -9,7 +9,7 @@ import qualified Data.IntSet as IntSet
 import qualified Data.IntMap as IntMap
 import qualified Data.Binary as B
 import qualified Data.ByteString.Lazy as BS
-import GramLab.Utils (padRight)
+import Aux.Utils (padRight)
 import Data.List (sortBy)
 import Data.Ord (comparing)
 import System.IO (stderr,hPutStrLn)

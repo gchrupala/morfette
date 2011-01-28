@@ -15,7 +15,10 @@ import qualified Data.IntSet as IntSet
 import qualified Data.Map    as Map
 import qualified Data.Set    as Set
 import qualified Data.List   as List
-import qualified GramLab.Utils as Utils
+import qualified Aux.Utils as Utils
+import qualified Control.Monad.State as S
+import qualified Data.Traversable as T
+
 import Data.Maybe
 import Data.Ord (comparing)
 
@@ -43,7 +46,7 @@ instance FeatureSet (Map.Map key (Feature sym num)) key sym num where
 assocListToFeatureSet = liftM (IntMap.fromList . concat) 
                         . mapM (uncurry realFeature) 
 mapToFeatureSet = assocListToFeatureSet . Map.toList 
-listToFeatureSet = assocListToFeatureSet . Utils.index
+listToFeatureSet = assocListToFeatureSet . index
 
 {-# SPECIALIZE INLINE realFeature :: 
     Int
@@ -54,3 +57,9 @@ realFeature k (Sym s)  = intern (k,Just s)  >>= \i -> return $ [(i,1)]
 realFeature k (Num n)  = intern (k,Nothing) >>= \i -> return $ [(i,n)]
 realFeature k (Set ss) = mapM intern (zip (repeat k) (map Just (Utils.uniq ss))) 
                          >>= \is -> return $ zip is (repeat 1)
+
+index xs = S.evalState (T.mapM count xs) 0
+    where count a = do
+            i <- S.get
+            S.put (i+1)
+            return (i,a)

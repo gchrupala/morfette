@@ -19,7 +19,7 @@ import GramLab.Morfette.LZipper(LZipper)
 import GramLab.FeatureSet
 import Data.Char
 import Data.List
-import GramLab.Utils (padRight)
+import Aux.Utils (padRight)
 import Data.Binary
 import Control.Monad (liftM,liftM2)
 import GramLab.Morfette.Settings.Defaults

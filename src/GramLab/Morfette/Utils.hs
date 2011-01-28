@@ -17,7 +17,7 @@ import qualified Data.Set as Set
 import qualified Data.Map as Map
 import qualified Data.IntMap as IntMap
 import Control.Monad hiding (join)
-import GramLab.Utils (padRight,splitWith,splitOn
+import Aux.Utils (padRight,splitWith,splitOn
                      ,splitInto,join,tokenize,lowercase)
 import qualified GramLab.Perceptron.Model as M
 import GramLab.Morfette.Token

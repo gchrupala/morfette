@@ -24,9 +24,12 @@ import Data.Maybe (fromMaybe)
 import Debug.Trace
 import Data.Binary
 import Control.Monad (liftM)
-import GramLab.Utils (uniq)
+import Aux.Utils (uniq)
+import qualified Aux.Text as Text
+type Txt = Text.Txt
 
-data Smth a = Str { str :: String } | ES { es :: a } deriving (Eq,Ord,Show,Read)
+data Smth a = Str { str :: Txt } | ES { es :: a } deriving (Eq,Ord,Show,Read)
+
 instance Binary a => Binary (Smth a) where
     put (Str s) = put (0::Word8) >> put s
     put (ES  s) = put (1::Word8) >> put s
@@ -72,7 +75,7 @@ mkPreprune th = collectUntil (\x z -> th > snd x / z) ((+) . snd) 0
 
 data FeatureSpec a = 
     FS { label    :: Tok a -> Smth a
-       , features :: LZipper (Tok a) (Tok a) (Tok a) -> [Feature String Double] 
+       , features :: LZipper (Tok a) (Tok a) (Tok a) -> [Feature Txt Double] 
        , preprune :: ProbDist (Smth a) -> ProbDist (Smth a)
        , check    :: LZipper (Tok a) (Tok a) (Tok a) -> Smth a -> Bool 
        , trainSettings :: M.TrainSettings }
@@ -85,7 +88,7 @@ trainFun fspecs sents =
 train :: (Ord a,Show a) => 
          [FeatureSpec a] 
       -> [[Tok a]]  
-      -> [M.Model (Label a) Int String Double]
+      -> [M.Model (Label a) Int Txt Double]
 train fspecs sents = 
   flip map fspecs
            $ \fs ->  let yxs = concatMap (sentToExamples fs) $ sents
@@ -101,7 +104,7 @@ train fspecs sents =
 
 toModelFun :: (Ord a,Show a) => 
               FeatureSpec a 
-           -> (M.Model (Label a) Int String Double) 
+           -> (M.Model (Label a) Int Txt Double) 
            -> Model a
 toModelFun fs m = 
     let ys = Map.keys . M.classMap . M.modelData $ m
@@ -131,7 +134,7 @@ predictPipeline beamSize models sents = map predictK sents
 type Label a = Smth a
 sentToExamples ::  FeatureSpec a 
                -> [Tok a] 
-               -> [(Label a,[Feature String Double])]
+               -> [(Label a,[Feature Txt Double])]
 sentToExamples fs xs = slideThru f (fromList xs)
     where f z = 
               (  label fs 
