@@ -1,5 +1,5 @@
 
-import GramLab.Utils (splitWith,join,lowercase)
+import Aux.Utils (splitWith,join,lowercase)
 
 import qualified POS   as P 
 import qualified Lemma as L

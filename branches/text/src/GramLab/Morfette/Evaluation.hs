@@ -6,10 +6,9 @@ module GramLab.Morfette.Evaluation ( accuracy
 where
 import GramLab.Morfette.Token
 import Data.Maybe
-import GramLab.Utils (lowercase)
 import Text.Printf
 import GramLab.Binomial
-
+import qualified Aux.Text as Text
 
 data Accuracy = Acc { lemmaAcc :: AccBL
                     , posAcc   :: AccBL 
@@ -41,7 +40,7 @@ sentenceAccuracy :: [[Token]] -> [[Token]] -> Maybe [[Token]] -> Accuracy
 sentenceAccuracy xs ys bl = accuracy (map,map,map) (map (map tokToPair) xs) 
                                                    (map (map tokToPair) ys) 
                                                    (fmap (map (map tokToPair)) bl)
-tokToPair (form,lemma,pos) = (lowercase $ fromMaybe form lemma,pos)
+tokToPair (form,lemma,pos) = (Text.lowercase $ fromMaybe form lemma,pos)
 
 
 accuracy (g,h,i) gold test mbl = Acc { lemmaAcc = AccBL (correct (g fst) test) (fmap (correct (g fst)) mbl)

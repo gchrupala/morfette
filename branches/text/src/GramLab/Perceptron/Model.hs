@@ -22,7 +22,7 @@ import qualified Data.IntSet as IntSet
 import Data.Array.Unboxed hiding ((!))
 import Data.List (foldl')
 import Data.Maybe (catMaybes)
-import GramLab.Utils (uniq)
+import Aux.Utils (uniq)
 import Data.Char (isAlphaNum)
 import GramLab.Intern
 import GramLab.Data.Assoc

@@ -17,14 +17,15 @@ import Data.Binary hiding (decode)
 import qualified Data.Binary as Binary (decode)
 import qualified Data.ByteString.Lazy as BS
 import Data.Maybe (catMaybes)
-import GramLab.Utils (padRight,splitWith,splitInto,lowercase)
 import GramLab.Morfette.Token
 import Debug.Trace
 import qualified Control.Monad.State as S
+import qualified Aux.Text as Text 
+type Txt = Text.Txt
     
 type Lang = String
-type Lexicon = Map.Map String [(String, String)]
-type ClusterDict = Map.Map String String
+type Lexicon = Map.Map Txt [(Txt, Txt)]
+type ClusterDict = Map.Map Txt Txt
 
 data Conf = Conf { dictLex  :: Lexicon
                  , clusterDict :: ClusterDict 
@@ -52,12 +53,12 @@ readConf path = do
   txt <- BS.readFile path
   return (Binary.decode txt)
 
-parseClusterDict :: String -> ClusterDict
+parseClusterDict :: Txt -> ClusterDict
 parseClusterDict =   Map.fromList 
-                 . map (\ln -> let [w,c] = words ln in (w,c)) 
-                 . lines             
+                 . map (\ln -> let [w,c] = Text.words ln in (w,c)) 
+                 . Text.lines             
 
-parseLexicon :: Maybe (Set.Set String) -> String -> Lexicon 
+parseLexicon :: Maybe (Set.Set Txt) -> Txt -> Lexicon 
 parseLexicon toks = 
     Map.fromListWith (++)
            . flip S.evalState Map.empty 
@@ -68,21 +69,21 @@ parseLexicon toks =
                      return (f',[(l',p')]))
            . maybe id (\d -> filter (\(w,_) -> w `Set.member`d)) toks
            . concatMap parseEntry 
-           . lines 
+           . Text.lines 
 
-parseEntry :: String -> [(String,(String, String))]
+parseEntry :: Txt -> [(Txt,(Txt, Txt))]
 parseEntry line = 
-    let (form:pairs) = words line 
-    in [ lemma == lemma && pos == pos `seq` (form,(lemma,lowercase pos))
+    let (form:pairs) = Text.words line 
+    in [ lemma == lemma && pos == pos `seq` (form,(lemma,Text.lowercase pos))
              | [lemma,pos] <- splitInto 2 $ pairs ]
 
 
 
-splitPOS :: Lang -> String -> [String]
-splitPOS "tr" = splitWith (=='+')
-splitPOS "pl" = splitWith (==':')
-splitPOS "cy" = splitWith (=='-')
-splitPOS "ga" = splitWith (=='-')
+splitPOS :: Lang -> Txt -> [Txt]
+splitPOS "tr" = Text.splitWith (=='+')
+splitPOS "pl" = Text.splitWith (==':')
+splitPOS "cy" = Text.splitWith (=='-')
+splitPOS "ga" = Text.splitWith (=='-')
 splitPOS _    = map return
 
 atomize str = do
@@ -91,3 +92,8 @@ atomize str = do
     Nothing -> do S.put (Map.insert str str d)
                   return str
     Just str' -> return str'
+
+splitInto :: Int -> [a] -> [[a]]
+splitInto size [] = []
+splitInto size xs = let (ws,ys) = splitAt size xs
+                    in  ws:splitInto size ys

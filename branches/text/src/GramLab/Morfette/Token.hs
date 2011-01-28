@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module GramLab.Morfette.Token ( Token
                               , Sentence
                               , tokenForm
@@ -9,9 +10,10 @@ module GramLab.Morfette.Token ( Token
                               )
                                
 where
+import qualified Aux.Text as Text
 
-
-type Token      = (String,Maybe String,Maybe String)
+type Txt = Text.Txt
+type Token      = (Txt,Maybe Txt,Maybe Txt)
 type Sentence   = [Token]
 
 tokenForm (form,_,_)   = form
@@ -19,7 +21,7 @@ tokenLemma (_,lemma,_) = lemma
 tokenPOS   (_,_,pos)   = pos
 
 parseToken line =
-    case words line of 
+    case Text.words line of 
       form:lemma:pos:_    -> (form,Just lemma,Just pos)
       [form,lemma]        -> (form,Just lemma,Nothing)
       [form]              -> (form,Nothing,Nothing)

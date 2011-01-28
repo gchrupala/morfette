@@ -25,7 +25,7 @@ import qualified Data.Set as Set
 import qualified Data.IntSet as IntSet
 import Data.Bits
 import Data.Maybe (isJust,fromMaybe)
-import GramLab.Utils (uniq)
+import Aux.Utils (uniq)
 import Text.Printf (printf)
 import Debug.Trace 
 
