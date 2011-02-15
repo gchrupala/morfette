@@ -1,5 +1,6 @@
 module GramLab.Morfette.MWE ( detectMwes
                             , mweSet
+                            , mwes
                             , saveMwes
                             , loadMwes 
                             )
@@ -16,15 +17,17 @@ import qualified Data.ByteString.Lazy as BS
 mweSep = '_'
 
 mweSet :: [Token] -> [[String]]
-mweSet toks = List.sortBy (flip (comparing length))
-              . map fst
-              . filter ((> 1) . snd)
-              . Map.toList
+mweSet = mwes . map tokenForm
+
+mwes :: [String] -> [[String]]
+mwes = List.sortBy (flip (comparing length))
+              . filter ((>1) . length)
+              . Map.keys
+              . Map.filter (>1)
               . Map.fromListWith (+)
               . map (\x -> (x,1)) 
               . map (splitWith (==mweSep))
               . filter common
-              . map tokenForm $ toks
     where common = all (\c -> isLower c || c `elem` [mweSep,'-'])
 
 detectMwes :: [[String]] -> [String] -> [String]
