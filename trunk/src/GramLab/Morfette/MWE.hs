@@ -28,12 +28,17 @@ mweSet toks = List.sortBy (flip (comparing length))
     where common = all (\c -> isLower c || c `elem` [mweSep,'-'])
 
 detectMwes :: [[String]] -> [String] -> [String]
-detectMwes mwes [] = []
-detectMwes mwes (x:xs) = case List.find (`List.isPrefixOf` xs') mwes of
-                           Nothing -> x:detectMwes mwes xs
-                           Just mwe -> let len = length mwe 
-                                       in join [mweSep] (take len (x:xs)) : drop len (x:xs)
-    where  xs' = map lowercase (x:xs)                         
+detectMwes mwes = map (join [mweSep]) . compounds lowercase mwes
+
+compounds :: (Ord a) => (a -> a) -> [[a]] -> [a] -> [[a]]
+compounds f xxs []     = []
+compounds f xxs (y:ys) = 
+    let zs = map f (y:ys)
+    in  case List.find (`List.isPrefixOf` zs) xxs of
+          Nothing -> [y]:compounds f xxs ys
+          Just x  -> let len = length x
+                         (prefix,ys') = List.splitAt len (y:ys)
+                     in prefix : compounds f xxs ys'
 
 saveMwes path mwes = do
   BS.writeFile path (encode mwes)
