@@ -37,6 +37,8 @@ import GramLab.Morfette.Evaluation
 import GramLab.Morfette.Settings.Defaults
 import GramLab.Intern (Table(..),intern,initial,runState,evalState)
 import GramLab.FeatureSet (toFeatureSet,FeatureSet)
+import qualified Paths_morfette
+import Data.Version (Version(..))
 import Debug.Trace
 
 data Flag = ModelPrefix String
@@ -124,8 +126,15 @@ commands fs fspecs = [
                                        "ignore POS starting with POS-prefix for evaluation"
                           ]
                           ["TRAIN-FILE","GOLD-FILE","TEST-FILE"])
+           , ("version", CommandSpec version "show version" [] [] )
+                       
            ]
 
+version _ _ = do
+  let showVersion (Version { versionBranch = is })  = 
+          "morfette-" ++ (List.concat . List.intersperse "." . map show $ is)
+  putStrLn . showVersion $ Paths_morfette.version
+    
 
 predict (_,format) fspecs flags [modelprefix] = do
   hPutStrLn stderr $ "Loading models from " ++ (modelFile modelprefix)
