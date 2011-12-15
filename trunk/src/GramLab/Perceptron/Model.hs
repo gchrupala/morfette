@@ -1,16 +1,17 @@
 {-# LANGUAGE FlexibleContexts , BangPatterns #-}
-module GramLab.Perceptron.Model ( train
-                                    , distribution
-                                    , classify
-                                    , save
-                                    , load
-                                    , I.TrainSettings(..)
-                                    , Model(..)
-                                    , ModelData(..)
-                                    , dump
-                                    , dumpMapping
-                                    , DumpMode(..)
-                                    )
+module GramLab.Perceptron.Model 
+       ( train
+       , distribution
+       , classify
+       , save
+       , load
+       , I.TrainSettings(..)
+       , Model(..)
+       , ModelData(..)
+       , dump
+       , dumpMapping
+       , DumpMode(..)
+       )
 where
 import qualified GramLab.Perceptron.IntModel as I
 import qualified Data.ByteString.Lazy as BS
