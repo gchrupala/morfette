@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -fglasgow-exts #-}
 module GramLab.Morfette.Features.Common ( spellingSpec
                                         , prefixes
                                         , suffixes

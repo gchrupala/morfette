@@ -1,4 +1,5 @@
-{-# OPTIONS_GHC -fglasgow-exts #-}
+{-# LANGUAGE MultiParamTypeClasses , FunctionalDependencies 
+, FlexibleInstances #-}
 module GramLab.Data.Assoc ( Assoc 
                           , fromAssoc
                           )
