@@ -8,7 +8,7 @@ module GramLab.Commands ( Command
 where
 import Text.PrettyPrint(renderStyle,render,nest,vcat,hsep,style,Mode(..),mode,text,(<>),($$),($+$),(<+>))
 import System.Console.GetOpt
-import System
+import System.Environment
 import System.IO (stderr)
 import System.IO.UTF8 (hPutStr)
 import qualified Data.List as List
