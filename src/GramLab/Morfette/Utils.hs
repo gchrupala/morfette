@@ -162,6 +162,9 @@ predict (_,format) fspecs flags [modelprefix] = do
            . toksToForms 
            . getToks flags mwes
            $ txt
+predict _fs _fspecs _flags _args = do
+  error $ "GramLab.Morfette.Utils.predict: " 
+        ++ "Incorrect arguments to command predict."
 
 confFile       dir = dir </> "conf.model"
 mweFile        dir = dir </> "mwe.model" 
@@ -204,7 +207,10 @@ extractFeatures (prepr,fmt) [fspos,fslem] flags [modeldir] = do
              $ xys
   B.writeFile (classMapFile modeldir) . encode $ ym
   B.writeFile (featMapFile modeldir) . encode $ xm
-
+extractFeatures _fs _fspecs _flags _args = do
+  error $ "GramLab.Morfette.Utils.extractFeatures: " 
+        ++ "Incorrect arguments to command extract-features."
+        
 format :: (String,(IntMap.IntMap Double,Int)) -> String
 format (w,(x,y)) = unwords (w:show y : [ show i ++ ":" ++ show n 
                                        | (i,n) <- IntMap.toList x ])
@@ -263,7 +269,10 @@ train (prepr,_) fspecs flags [dat,modeldir] = do
   B.writeFile (modelFile modeldir) (encode models)
   saveConf (confFile modeldir) lex
   saveMwes (mweFile modeldir) mwes
-
+train _fs _fspecs _flags _args = do
+  error $ "GramLab.Morfette.Utils.train: " 
+        ++ "Incorrect arguments to command train."
+        
 toksToSentences :: (Token -> Models.Tok a) -> [Token] -> [[Models.Tok a]]
 toksToSentences f toks = map (map f)  $ splitWith isNullToken toks
 
@@ -355,7 +364,10 @@ eval flags [trainf,goldf,testf] = do
 --  putStrLn $ "Sentence accuracy:\n" ++ showAccuracy sent_acc
   where toks  xs   = filter (not . isNullToken) xs
         sents xs   = splitWith isNullToken xs
-    
+eval _flags _args = do
+  error $ "GramLab.Morfette.Utils.eval: " 
+        ++ "Incorrect arguments to command eval."
+        
 filterZip :: [Bool] -> [a] -> [a]
 filterZip xs ys = catMaybes $ zipWith (\b x -> if b then Just x else Nothing) xs ys
     
