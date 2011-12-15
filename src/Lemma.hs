@@ -11,8 +11,14 @@ featureSpec global  = FS { label    = theLabel
                          , check    = theCheck 
                          , trainSettings = lemmaTrainSettings }
 
-theCheck z (ES s) = E.check s (prepare (getForm (fromMaybe (error "Lemma.featureSpec.check: Nothing") 
-                                                                  (focus z))))
+theCheck z (ES s) = 
+  let wf =  prepare 
+          . getForm 
+          . fromMaybe (error "Lemma.featureSpec.check: Nothing") 
+          . focus
+          $ z
+  in E.check s wf && not (null (E.apply s wf))
+     
 theLabel (Str form:Str pos:Str lemma:_) = make form lemma
 theLabel (Str _   :Str pos:ES  s:_)     = ES s
 theLabel other = error $ "Lemma.theLabel: match failed with " ++ show other
