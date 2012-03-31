@@ -12,6 +12,7 @@ where
 import Data.Array.ST
 import qualified Data.Array.Unboxed as A
 import Control.Monad.ST
+import qualified Control.Monad.ST.Unsafe as STUnsafe
 import Data.STRef
 import Control.Monad
 import GramLab.Perceptron.Vector
@@ -152,7 +153,7 @@ finalParams (c,params,params_a) = do
       writeArray params i (e - (e_a * (1/c')))
 
 {-# NOINLINE runLogger #-}
-runLogger f = unsafeIOToST f
+runLogger f = STUnsafe.unsafeIOToST f
 
 m `at` i = Map.findWithDefault 0 i m
         
