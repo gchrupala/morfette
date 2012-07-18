@@ -9,10 +9,11 @@ module GramLab.Perceptron.Multiclass
     )
 where
 
-import Data.Array.ST
+import Data.Array.ST 
 import qualified Data.Array.Unboxed as A
 import Control.Monad.ST
 import qualified Control.Monad.ST.Unsafe as STUnsafe
+import qualified Data.Array.Unsafe as ArrayUnsafe
 import Data.STRef
 import Control.Monad
 import GramLab.Perceptron.Vector
@@ -92,7 +93,7 @@ iter rate yss ss (c,params,params_a) = do
     let ((_,lo),(_,hi)) = A.bounds yss
         ys = [lo..hi]
     for_ (zip [0..] ss) $ \ (i,(x,y)) -> do
-      params' <- unsafeFreeze params
+      params' <- ArrayUnsafe.unsafeFreeze params
       let ys' = [ y | y <- ys , yss A.! (i,y) ] 
           y'= decode (MC params') ys' x
           phi_xy = phi x y
@@ -123,8 +124,8 @@ train rate epochs bounds yss xys =  MC m
               for_ [1..epochs] $ 
                      \i -> do iter rate yss xys (c,params,params_a)
                               c' <- readSTRef c
-                              params' <- unsafeFreeze params
-                              params_a' <- unsafeFreeze params_a
+                              params' <- ArrayUnsafe.unsafeFreeze params
+                              params_a' <- ArrayUnsafe.unsafeFreeze params_a
                               let w  = (fromIntegral c',params',params_a')
                                   corr = sum 
                                          . map (\(j,(x,y)) -> 
