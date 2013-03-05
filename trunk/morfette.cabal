@@ -38,3 +38,5 @@ Executable     morfette
   cc-options:     -Wall 
   c-sources:      src/ghc_rts_opts.c 
   ghc-options:    -O2 -rtsopts
+-- uncomment the following line to link statically
+--  ld-options:     -static -pthread
