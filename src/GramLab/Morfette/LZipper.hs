@@ -14,8 +14,14 @@ import Data.Maybe
 import Debug.Trace
 
 data LZipper a b c = LZ [a] (Maybe b) [c]  deriving (Show,Eq,Ord)
+
+left :: LZipper t t1 t2 -> [t]
 left  (LZ xs _ _) = xs
+
+focus :: LZipper t t1 t2 -> Maybe t1
 focus (LZ _ x _)  = x
+
+right :: LZipper t t1 t2 -> [t2]
 right (LZ _ _ ys) = ys
 
 fromList []     = LZ [] Nothing [] 

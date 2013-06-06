@@ -30,6 +30,11 @@ maxPrefix = 5
 
 prepare = lowercase
 
+type ET = E.EditTree String Char
+
+theFeatures  ::    Conf
+                -> LZipper [Smth ET] [Smth ET] [Smth ET]
+                -> [Feature String Double]
 theFeatures  global tic = focusFeatures     (focus tic)
     where focusFeatures (Just (Str form:Str label:_)) = [ Sym $ low form, Sym $ label
                                                         , Sym $ spellingSpec form

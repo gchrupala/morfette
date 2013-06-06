@@ -1,5 +1,5 @@
 Name:       morfette
-Version:    0.3.5
+Version:    0.3.6
 Homepage:   http://sites.google.com/site/morfetteweb/
 Synopsis:   A tool for supervised learning of morphology
 Description: Morfette is a tool for supervised learning of inflectional
@@ -9,7 +9,7 @@ Description: Morfette is a tool for supervised learning of inflectional
 License:     BSD3
 License-file: LICENSE
 Author:      Grzegorz Chrupała
-Maintainer:  Grzegorz Chrupała <gchrupala@lsv.uni-saarland.de>
+Maintainer:  Grzegorz Chrupała <grzegorz.chrupala@gmail.com>
 build-type:  Simple
 category:    Natural Language Processing
 Extra-source-files: README, INSTALL, Makefile

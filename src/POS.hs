@@ -16,9 +16,13 @@ rightCtx  = 1
 maxSuffix = 7
 maxPrefix = 5
 
+type ET = E.EditTree String Char
 
+theFeatures  ::    Conf
+                -> LZipper [Smth ET] [Smth ET] [Smth ET]
+                -> [Feature String Double]
 theFeatures global tic = let prev = getSome  leftCtx   (left tic)
-                            in
+                         in
                               concatMap leftFeatures prev
                            ++ [Sym $ concat $ map getpos prev] -- concat prefix of previous poslabels
                            ++ focusFeatures     (focus tic)
