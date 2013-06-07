@@ -31,6 +31,8 @@ import Data.Char
 import GramLab.Morfette.Lang.Conf
 import Data.Binary
 import qualified Data.ByteString.Lazy as B
+import qualified Data.Text.Lazy as Text
+import qualified Data.Text.Lazy.IO as Text
 import qualified GramLab.Morfette.Config as C
 import GramLab.Morfette.Evaluation
 import GramLab.Morfette.Settings.Defaults
@@ -142,7 +144,7 @@ predict (_,format) fspecs flags [modelprefix] = do
   when True $ do
     mwes <- loadMwes (mweFile modelprefix)
     lex        <- readConf (confFile modelprefix)
-    txt <- getContents
+    txt <- Text.getContents
     let models = zipWith Models.toModelFun (map ($lex) fspecs) ms
         defaultBeamSize = 3
         n = case [f | BeamSize f <- flags ] 
@@ -194,7 +196,7 @@ extractFeatures (prepr,fmt) [fspos,fslem] flags [modeldir] = do
               []        -> fspos lex
               other -> error $ "GramLab.Morfette.Utils.extractFeatures: " 
                        ++ "invalid option value: " ++ show other
-  toks <- fmap (map parseToken . lines) getContents
+  toks <- fmap (map parseToken . Text.lines) Text.getContents
   let ws = filter (not . null) . map tokenForm $ toks
       (xm,ym,xys) =  convertFeatures
          . map swap
@@ -237,7 +239,7 @@ train  :: (Ord a, Show a, Binary a) =>
      -> [FilePath]
      -> IO ()
 train (prepr,_) fspecs flags [dat,modeldir] = do
-  toks <- fmap (map parseToken . lines) (readFile dat)
+  toks <- fmap (map parseToken . Text.lines) (Text.readFile dat)
   let tokSet = Set.fromList [ tokenForm t | t <- toks ]
   dict <- getDict flags Nothing
   clusters <- getClusters flags
@@ -296,14 +298,16 @@ getClusters flags = do
     [f] -> fmap parseClusterDict $ readFile f
     [] -> return Map.empty
 
-getToks :: [Flag] -> [[String]] -> String -> [Token]
+getToks :: [Flag] -> [[String]] -> Text.Text -> [Token]
 getToks flags mwes text = 
     let f = if Tokenize `elem` flags 
-            then  concatMap (detectMwes mwes) 
+            then  map Text.pack 
+                  . concatMap (detectMwes mwes) 
                   . List.intersperse [""] 
                   . map tokenize 
+                  . map Text.unpack
             else id
-    in map parseToken . f . lines $ text
+    in map parseToken . f . Text.lines $ text
              
 
 formatTriple (form,lemma,pos) = unwords . map (padRight ' ' 12) $ [form,lemma,pos] 
@@ -333,7 +337,7 @@ getEval flags trainf goldf testf = do
          , filterZip keeps gold
          , filterZip keeps test
          , fmap (filterZip keeps) baseline )
- where getTokens f = fmap (map parseToken . lines) (readFile f)
+ where getTokens f = fmap (map parseToken . Text.lines) (Text.readFile f)
 -- FIXME its breaks sentence accuracy somehow...
 
 eval flags [trainf,goldf,testf] = do
