@@ -71,7 +71,6 @@ decode' w ys x = snd . maximum
 
 
 {-# INLINE softmax #-}
-{-# SPECIALIZE softmax :: [Float] -> [Float] #-}
 softmax x = 
     let !x_max = maximum x
         !a = foldl' (+) 0  . map (\ !x_i -> exp $ x_i - x_max)  $ x

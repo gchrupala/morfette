@@ -45,9 +45,7 @@ scale :: (Ix i)  => SparseVector y i -> Float -> SparseVector y i
 scale (v,y) n = (map (\(i,vi) -> (i,vi*n)) v,y)
 
 {-# INLINE dot #-}
-{-# SPECIALIZE dot :: DenseVector (Int,Int) 
-                   -> ([(Int,Float)],Int)-> Float #-}
-dot :: (Ix (y,i)) => DenseVector (y,i) -> ([(i,Float)],y) -> Float
+dot :: (Ix (y,i), Ix i, Ix y) => DenseVector (y,i) -> ([(i,Float)],y) -> Float
 dot w (x,!y) = go 0 x
     where go !s [] = s
           go !s ((!i,!xi):x) = go (s + (w ! (y,i)) * xi) x
@@ -64,9 +62,7 @@ dot' (!c,params,params_a) (x,!y) = go 0 x
             in go (s + (e - (e_a * (1/c))) * xi) x
 
 {-# INLINE unsafeDot #-}
-{-# SPECIALIZE unsafeDot :: DenseVector (Int,Int) 
-                         -> ([(Int,Float)],Int)-> Float #-}
-unsafeDot :: (Ix (y,i)) => DenseVector (y,i) -> ([(i,Float)],y) -> Float
+unsafeDot :: (Ix (y,i), Ix i, Ix y) => DenseVector (y,i) -> ([(i,Float)],y) -> Float
 unsafeDot w (x,!y) = go 0 x
     where bs = bounds w
           go !s [] = s

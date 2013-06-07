@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module GramLab.Morfette.Token ( Token
                               , Sentence
                               , tokenForm
@@ -15,6 +17,9 @@ import qualified Data.Vector.Unboxed as U
 import GramLab.Utils
 import Data.Char
 import Debug.Trace
+import qualified Data.Text.Lazy as Text
+import qualified Data.Text.Lazy.Read as Text
+
 
 type EMB = U.Vector (Int, Double)
 
@@ -29,17 +34,19 @@ token :: String -> Maybe EMB -> Maybe String -> Maybe String -> Token
 token f e l p = 
   Token { tokenForm = f, tokenEmbedding = e, tokenLemma = l, tokenPOS = p }
   
+parseToken :: Text.Text -> Token  
 parseToken line =
-  let t = 
-        case words line of 
+  let str = Text.unpack
+      t = 
+        case Text.words line of 
           [form, embedding, lemma, pos] -> 
-            token   form   (Just (parseEmb embedding))  (Just lemma)  (Just pos)
+            token   (str form)   (Just (parseEmb embedding))  (Just $ str lemma)  (Just $ str pos)
           [form, lemma, pos]            -> 
-            token   form   Nothing                      (Just lemma)  (Just pos)
+            token   (str form)   Nothing                      (Just $ str lemma)  (Just $ str pos)
           [form, embedding]             -> 
-            token   form   (Just (parseEmb embedding))  Nothing       Nothing         
+            token   (str form)   (Just (parseEmb embedding))  Nothing       Nothing         
           [form]                        -> 
-            token   form   Nothing                      Nothing       Nothing
+            token   (str form)   Nothing                      Nothing       Nothing
           []                            -> 
             nullToken
   in U.length (maybe U.empty id (tokenEmbedding t)) `seq` t
@@ -47,8 +54,20 @@ parseToken line =
 nullToken = token "" Nothing Nothing Nothing 
 isNullToken t = t == nullToken
 
-parseEmb :: String -> EMB
-parseEmb = U.fromList . filter ((/= 0.0) . snd) . zip [0..] . map read . splitOn ','
+parseEmb :: Text.Text -> EMB
+parseEmb = U.fromList 
+           . filter ((/= 0.0) . snd) 
+           . zip [0..] 
+           . map readDouble 
+           . filter (not . Text.null)
+           . Text.splitOn ","
+
+readDouble :: Text.Text -> Double
+readDouble s = 
+  case Text.double s of
+    Right (d, "") -> d
+    Left e        -> error $ "GramLab.Morfette.Token.readDouble: " ++ show e
+    _             -> error $ "GramLab.Morfette.Token.readDouble: parse error"
 
 lowercaseToken :: Token -> Token
 lowercaseToken t = token (lowercase (tokenForm t)) 
