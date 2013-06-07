@@ -238,7 +238,7 @@ train  :: (Ord a, Show a, Binary a) =>
      -> IO ()
 train (prepr,_) fspecs flags [dat,modeldir] = do
   toks <- fmap (map parseToken . lines) (readFile dat)
-  let tokSet = Set.fromList [ s | t@(s,_,_) <- toks ]
+  let tokSet = Set.fromList [ tokenForm t | t <- toks ]
   dict <- getDict flags Nothing
   clusters <- getClusters flags
   let langConf = case [f | Lang f <- flags ] of { [] -> "xx" ; [f] -> f }
@@ -277,7 +277,7 @@ toksToSentences :: (Token -> Models.Tok a) -> [Token] -> [[Models.Tok a]]
 toksToSentences f toks = map (map f)  $ splitWith isNullToken toks
 
 toksToForms :: [Token] -> [[Models.Tok a]]
-toksToForms toks = map (map (\ (f,_,_) ->[Str f])) 
+toksToForms toks = map (map (\ t ->[Str $ tokenForm t])) 
                    . splitWith isNullToken 
                    $ toks
 
@@ -311,15 +311,16 @@ formatToken (f,ml,mp) = unwords [f,fromMaybe "" ml,fromMaybe "" mp]
 
 getEval flags trainf goldf testf = do
   let uncase = if IgnoreCase `elem` flags then
-                   map (\(form,lemma,pos) -> (lowercase form,fmap lowercase lemma, fmap lowercase pos))
+                   map lowercaseToken 
                else id
       ignore = case [f | IgnorePOS f <- flags ] of
                  [] -> const False
-                 xs -> (\(_,_,mpos) -> case mpos of
-                                         Nothing -> False 
-                                         Just pos -> any (`List.isPrefixOf` pos) xs)
-      isPunct = if IgnorePunct `elem` flags then (\t@(form,_,_) -> 
-                                                      (not . isNullToken) t && all isPunctuation form) else const False
+                 xs -> (\t -> case tokenPOS t of
+                           Nothing -> False 
+                           Just pos -> any (`List.isPrefixOf` pos) xs)
+      isPunct = if IgnorePunct `elem` flags 
+                then (\t -> (not . isNullToken) t && all isPunctuation (tokenForm t)) 
+                else const False
       keep tok = (not . ignore) tok && (not . isPunct) tok
   train <- fmap uncase (getTokens trainf)
   gold  <- fmap uncase (getTokens goldf)
@@ -339,8 +340,8 @@ eval flags [trainf,goldf,testf] = do
   (train,gold,test,baseline) <- fmap (\ (tr, g, t, b) -> (tr,toks g, toks t, fmap toks b)) (getEval flags trainf goldf testf)
   let seen = Set.fromList (map tokenForm train)
   dict  <- getDict flags . Just $ seen
-  let isUnseen (form,_,_) = not (form `Set.member` seen)
-      isUnseenInDict (form,_,_) = not (lowercase form `Map.member` dict)
+  let isUnseen t = not (tokenForm t `Set.member` seen)
+      isUnseenInDict t = not (lowercase (tokenForm t) `Map.member` dict)
       isUnseenBoth x = isUnseen x && isUnseenInDict x
       all_acc    = tokenAccuracy gold test baseline
       unseen_acc = tokenAccuracy (filter isUnseen gold) (filter isUnseen test) 
@@ -352,7 +353,7 @@ eval flags [trainf,goldf,testf] = do
                                                 (filter isUnseenBoth test)
                                                 (fmap (filter isUnseenBoth) baseline)
       sent_acc   = sentenceAccuracy (sents gold) (sents test) (fmap sents baseline)
-      goldlemma g= map (lowercase . tokenLemma) g
+      goldlemma g= map (fmap lowercase . tokenLemma) g
       uniquePOS  = fromIntegral $ Set.size $ Set.fromList $ map tokenPOS gold
   putStrLn $ "Unseen word ratio: " ++ printf "%4.2f" (unseen_ratio::Double)
   putStrLn $ "Token accuracy all:\n" ++ showAccuracy all_acc
