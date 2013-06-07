@@ -41,7 +41,9 @@ sentenceAccuracy :: [[Token]] -> [[Token]] -> Maybe [[Token]] -> Accuracy
 sentenceAccuracy xs ys bl = accuracy (map,map,map) (map (map tokToPair) xs) 
                                                    (map (map tokToPair) ys) 
                                                    (fmap (map (map tokToPair)) bl)
-tokToPair (form,lemma,pos) = (lowercase $ fromMaybe form lemma,pos)
+
+tokToPair :: Token -> (String, Maybe String)
+tokToPair t = (lowercase $ fromMaybe (tokenForm t) (tokenLemma t), tokenPOS t)
 
 
 accuracy (g,h,i) gold test mbl = Acc { lemmaAcc = AccBL (correct (g fst) test) (fmap (correct (g fst)) mbl)

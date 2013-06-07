@@ -25,16 +25,24 @@ import Debug.Trace
 import Data.Binary
 import Control.Monad (liftM)
 import GramLab.Utils (uniq)
+import qualified Data.Vector.Unboxed as U
+import GramLab.Morfette.BinaryInstances
 
-data Smth a = Str { str :: String } | ES { es :: a } deriving (Eq,Ord,Show,Read)
+data Smth a = Str { str :: String } 
+            | ES { es :: a } 
+            | Embed (Maybe (U.Vector (Int,Double)))
+            deriving (Eq,Ord,Show,Read)
+                     
 instance Binary a => Binary (Smth a) where
     put (Str s) = put (0::Word8) >> put s
     put (ES  s) = put (1::Word8) >> put s
+    put (Embed s) = put (2::Word8) >> put s
     get = do
       tag <- get
       case tag::Word8 of
            0 -> liftM Str get
            1 -> liftM ES get
+           2 -> liftM Embed get
 
 type ProbDist a = [(a,Double)]
 
