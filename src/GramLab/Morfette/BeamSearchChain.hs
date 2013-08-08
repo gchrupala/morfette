@@ -36,10 +36,10 @@ beamSearch n th cfs pzs =
     if any (atEnd . fst) pzs  -- of any lzipper at end then get then return tokens
     then flip map pzs $ \(z,p) -> (map id (reverse (left z)),p)
     else -- otherwise apply each classifier in turn in the lzipper seq, prune, adjust probs
-         let f model pzs' =   prune n 
-                              $ flip concatMap pzs'
-                                    $ \(z,p) -> flip map (preprune th .  model $ z) 
-                                                $ \(c,c_p) -> (modify (\x -> x ++ [c]) z,p*c_p)
+         let f model pzs' =     prune n 
+                              . flip concatMap pzs'
+                              $ \(z,p) -> flip map (preprune th .  model $ z) 
+                                          $ \(c,c_p) -> (modify (\x -> x ++ [c]) z,p*c_p)
                            
          in beamSearch n th cfs . map (\(z,p) -> (slide z,p)) $! (foldr f pzs cfs)
 
