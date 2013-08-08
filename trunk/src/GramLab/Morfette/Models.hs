@@ -23,7 +23,7 @@ import qualified Data.IntMap as IntMap
 import Data.Maybe (fromMaybe)
 import Debug.Trace
 import Data.Binary
-import Control.Monad (liftM)
+import Control.Monad (liftM, liftM2)
 import GramLab.Utils (uniq)
 import qualified Data.Vector.Unboxed as U
 import GramLab.Morfette.BinaryInstances
@@ -44,7 +44,48 @@ instance Binary a => Binary (Smth a) where
            1 -> liftM ES get
            2 -> liftM Embed get
 
+
+data TOK t a = TOK { input :: !t, output :: [a] } 
+               deriving (Eq,Ord,Show,Read)
+
+instance (Binary t, Binary a) => Binary (TOK t a) where
+  put t = put (input t) >> put (output t)
+  get = liftM2 TOK get get
+    
+
 type ProbDist a = [(a,Double)]
+
+
+type MODEL t a = LZipper (TOK t a)  (TOK t a) (TOK t a) -> ProbDist a
+
+bSEARCH :: 
+              Int   
+              -- beam size
+           -> [MODEL t a] 
+              -- models for each output column
+           -> ProbDist (LZipper (TOK t a) (TOK t a) (TOK t a)) 
+              -- prob dist over sequence of "tokens in context" (as lzippers)
+           -> ProbDist [TOK t a] 
+              -- prob dist over sequences of "tokens"
+bSEARCH n ms pzs =
+  let apply pzs model = 
+        prune n 
+          [ (modify (\t -> t { output = output t ++ [label] }) z  -- add label to output
+          , p0 * p                                                -- multiply probability in
+          ) 
+          | (z, p0) <- pzs                                        -- for each sequence (lzipper)
+          , (label, p) <- model z                                 -- get label and prob by applying
+                                                                  -- model. 
+          ]
+  in if any (atEnd . fst) pzs  
+        -- of any lzipper at end then return tokens
+     then flip map pzs $ \(z,p) -> (reverse (left z), p)
+     else 
+       -- otherwise apply both classifiers in turn in the lzipper seq,
+       -- prune, adjust probs
+       bSEARCH n ms . map (\(z,p) -> (slide z,p)) $! (foldl' apply pzs ms)
+
+
 
 type Tok a = [Smth a]
 type Model a = LZipper [Smth a] [Smth a] [Smth a] -> ProbDist (Smth a)
@@ -67,6 +108,8 @@ beamSearch n cfs pzs =
                                   $ \(c,c_p) -> 
                                       (modify (\x -> x ++ [c]) z,p*c_p)
          in beamSearch n cfs . map (\(z,p) -> (slide z,p)) $! (foldl f pzs cfs)
+
+-- FIXME TODO consider making SMTH a record instead of a list
 
 -- pruning and prepruning
 

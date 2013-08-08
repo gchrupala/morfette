@@ -279,7 +279,8 @@ toksToSentences :: (Token -> Models.Tok a) -> [Token] -> [[Models.Tok a]]
 toksToSentences f toks = map (map f)  $ splitWith isNullToken toks
 
 toksToForms :: [Token] -> [[Models.Tok a]]
-toksToForms toks = map (map (\ t ->[Str $ tokenForm t])) 
+toksToForms toks =   map (map (\ t ->[ Str $ tokenForm t --, error "toksToForms", error "toksToForms"
+                                     , Embed (tokenEmbedding t) ]))
                    . splitWith isNullToken 
                    $ toks
 
