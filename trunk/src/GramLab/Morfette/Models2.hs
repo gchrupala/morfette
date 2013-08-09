@@ -6,7 +6,7 @@ module GramLab.Morfette.Models2 ( train
                                , mkPreprune
                                , sentToExamples
                                , FeatureSpec (..)
-                               , Tok (..)
+                               , Row(..)
                                )
 where
 import GramLab.Morfette.LZipper
@@ -27,27 +27,35 @@ import GramLab.Utils (uniq)
 import qualified Data.Vector.Unboxed as U
 import GramLab.Morfette.BinaryInstances
 
-data Tok t a = Tok { input :: !t, output :: [a] } 
+data Row t a = Row { input :: !t, output :: ![a] } 
                deriving (Eq,Ord,Show,Read)
 
-instance (Binary t, Binary a) => Binary (Tok t a) where
+
+data FeatureSpec t a = 
+    FS { label    :: Row t a -> a
+       , features :: LZipper (Row t a) (Row t a) (Row t a) -> [Feature String Double] 
+       , preprune :: ProbDist a -> ProbDist a
+       , check    :: LZipper (Row t a) (Row t a) (Row t a) -> a -> Bool 
+       , trainSettings :: M.TrainSettings }
+    
+    
+instance (Binary t, Binary a) => Binary (Row t a) where
   put t = put (input t) >> put (output t)
-  get = liftM2 Tok get get
+  get = liftM2 Row get get
     
 
 type ProbDist a = [(a,Double)]
 
-
-type Model t a = LZipper (Tok t a)  (Tok t a) (Tok t a) -> ProbDist a
+type Model t a = LZipper (Row t a)  (Row t a) (Row t a) -> ProbDist a
 
 beamSearch :: 
               Int   
               -- beam size
            -> [Model t a] 
               -- models for each output column
-           -> ProbDist (LZipper (Tok t a) (Tok t a) (Tok t a)) 
+           -> ProbDist (LZipper (Row t a) (Row t a) (Row t a)) 
               -- prob dist over sequence of "tokens in context" (as lzippers)
-           -> ProbDist [Tok t a] 
+           -> ProbDist [Row t a] 
               -- prob dist over sequences of "tokens"
 beamSearch n ms pzs =
   let apply pzs model = 
@@ -77,21 +85,14 @@ collectUntil cond f z (x:xs) = let z' = (f $! x) $! z
                                    else x: collectUntil cond f z' xs
 mkPreprune th = collectUntil (\x z -> th > snd x / z) ((+) . snd) 0
 
-data FeatureSpec t a = 
-    FS { label    :: Tok t a -> a
-       , features :: LZipper (Tok t a) (Tok t a) (Tok t a) -> [Feature String Double] 
-       , preprune :: ProbDist a -> ProbDist a
-       , check    :: LZipper (Tok t a) (Tok t a) (Tok t a) -> a -> Bool 
-       , trainSettings :: M.TrainSettings }
-
-trainFun ::  (Ord a, Show a) => [FeatureSpec t a] -> [[Tok t a]]  -> [Model t a]
+trainFun ::  (Ord a, Show a) => [FeatureSpec t a] -> [[Row t a]]  -> [Model t a]
 trainFun fspecs sents = 
   let ms = train fspecs sents
   in (zipWith toModelFun fspecs ms) 
  
 train :: (Ord a,Show a) => 
          [FeatureSpec t a] 
-      -> [[Tok t a]]  
+      -> [[Row t a]]  
       -> [M.Model a Int String Double]
 train fspecs sents = 
   flip map fspecs
@@ -121,7 +122,7 @@ toModelFun fs m =
                   . features fs 
                   $ z 
            
-predict :: Int -> Int -> [Model t a] -> [[Tok t a]] -> [[[Tok t a]]]
+predict :: Int -> Int -> [Model t a] -> [[Row t a]] -> [[[Row t a]]]
 predict k beamSize models sents = map predictK sents
     where predictK s = transpose 
                          . map fst 
@@ -129,14 +130,14 @@ predict k beamSize models sents = map predictK sents
                          . beamSearch beamSize models 
                          $ [(fromList s,1)]
 
-predictPipeline :: Int -> [Model t a] -> [[Tok t a]] -> [[Tok t a]]
+predictPipeline :: Int -> [Model t a] -> [[Row t a]] -> [[Row t a]]
 predictPipeline beamSize models sents = map predictK sents
     where predictK s = foldl' (\s1 m -> fst . head . beamSearch beamSize [m] 
                                          $ [(fromList s1,1)]) s models
                                
 
 sentToExamples ::  FeatureSpec t a 
-               -> [Tok t a] 
+               -> [Row t a] 
                -> [(a,[Feature String Double])]
 sentToExamples fs xs = slideThru f (fromList xs)
     where f z = 
