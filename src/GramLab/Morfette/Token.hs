@@ -2,8 +2,9 @@
 
 module GramLab.Morfette.Token ( Token
                               , Sentence
+                              , Emb
                               , tokenForm
-                              , tokenEmbedding
+                              , tokenEmb
                               , tokenLemma
                               , tokenPOS
                               , parseToken
@@ -21,18 +22,18 @@ import qualified Data.Text.Lazy as Text
 import qualified Data.Text.Lazy.Read as Text
 
 
-type EMB = U.Vector (Int, Double)
+type Emb = U.Vector Double
 
 data Token      = Token { tokenForm :: String
-                        , tokenEmbedding :: Maybe EMB
+                        , tokenEmb :: Maybe Emb
                         , tokenLemma :: Maybe String
                         , tokenPOS :: Maybe String
                         } deriving (Show, Eq)
 type Sentence   = [Token]
 
-token :: String -> Maybe EMB -> Maybe String -> Maybe String -> Token
+token :: String -> Maybe Emb -> Maybe String -> Maybe String -> Token
 token f e l p = 
-  Token { tokenForm = f, tokenEmbedding = e, tokenLemma = l, tokenPOS = p }
+  Token { tokenForm = f, tokenEmb = e, tokenLemma = l, tokenPOS = p }
   
 parseToken :: Text.Text -> Token  
 parseToken line =
@@ -49,15 +50,13 @@ parseToken line =
             token   (str form)   Nothing                      Nothing       Nothing
           []                            -> 
             nullToken
-  in U.length (maybe U.empty id (tokenEmbedding t)) `seq` t
+  in U.length (maybe U.empty id (tokenEmb t)) `seq` t
 
 nullToken = token "" Nothing Nothing Nothing 
 isNullToken t = t == nullToken
 
-parseEmb :: Text.Text -> EMB
+parseEmb :: Text.Text -> Emb
 parseEmb = U.fromList 
-           . filter ((/= 0.0) . snd) 
-           . zip [0..] 
            . map readDouble 
            . filter (not . Text.null)
            . Text.splitOn ","
@@ -71,7 +70,7 @@ readDouble s =
 
 lowercaseToken :: Token -> Token
 lowercaseToken t = token (lowercase (tokenForm t)) 
-                         (tokenEmbedding t) 
+                         (tokenEmb t) 
                          (fmap lowercase (tokenLemma t)) 
                          (fmap lowercase (tokenPOS t))
   where lowercase = map toLower

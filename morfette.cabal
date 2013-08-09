@@ -27,7 +27,7 @@ Executable     morfette
                   GramLab.Perceptron.IntModel, GramLab.Morfette.Evaluation,
                   GramLab.Morfette.Lang.Conf, GramLab.Morfette.MWE,
                   GramLab.FeatureSet, GramLab.Perceptron.Model, 
-                  GramLab.Morfette.Config, GramLab.Morfette.Models, 
+                  GramLab.Morfette.Config, GramLab.Morfette.Models2, 
                   GramLab.Morfette.Settings.Defaults, 
                   GramLab.Morfette.Features.Common, 
                   Lemma, POS, GramLab.Morfette.Utils,

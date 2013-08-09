@@ -1,6 +1,9 @@
 module GramLab.Morfette.Utils ( train
                               , predict
                               , Flag(..)
+                              , Input (..)
+                              , Output (..)
+                              , ROW
                               , morfette
                               )
 where
@@ -10,8 +13,8 @@ import System.IO (stderr,stdout,stdin,hSetBinaryMode)
 import System.IO.UTF8 hiding (getContents,print,putStr,putStrLn)
 import qualified System.IO.UTF8 as UTF8
 import GramLab.Commands
-import qualified GramLab.Morfette.Models as Models
-import GramLab.Morfette.Models (Smth(..))
+import qualified GramLab.Morfette.Models2 as Models
+import GramLab.Morfette.Models2 (Row(..))
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 import qualified Data.IntMap as IntMap
@@ -38,6 +41,7 @@ import GramLab.Morfette.Evaluation
 import GramLab.Morfette.Settings.Defaults
 import GramLab.Intern (Table(..),intern,initial,runState,evalState)
 import GramLab.FeatureSet (toFeatureSet,FeatureSet)
+import GramLab.Data.Diff.EditTree (EditTree)
 import qualified Paths_morfette
 import Data.Version (Version(..))
 import Debug.Trace
@@ -61,6 +65,24 @@ data Flag = ModelPrefix String
           | IterLemma Int
           | ModelId String
           deriving Eq
+
+data Input  = Input { inputForm :: !String, inputEmb :: !(Maybe Emb) }
+              deriving (Eq, Ord, Show)
+                       
+data Output = ET !(EditTree String Char) | POS !String 
+            deriving (Eq, Ord, Show)
+
+instance Binary Output where
+  put (ET et) = put False >> put et
+  put (POS pos) = put True >> put pos
+  get = do
+    tag <- get
+    case tag of
+      False -> liftM ET get
+      True -> liftM POS get
+
+type ROW = Row Input Output
+type FEATSPEC = Models.FeatureSpec Input Output
 
 morfette fs fspecs = defaultMain (commands fs fspecs) "Usage: morfette command [OPTION...] [ARG...]"
 
@@ -176,9 +198,9 @@ featMapFile    dir = dir </> "featmap.model"
 
 defaultGaussianPrior = 1
 
-extractFeatures  :: (Ord a,Binary a,Show a) =>
-     (Token -> Models.Tok a, t)
-     -> [Conf -> Models.FeatureSpec a]
+extractFeatures  ::      
+        (Token -> ROW, t)
+     -> [Conf -> FEATSPEC]
      -> [Flag]
      -> [FilePath]
      -> IO ()
@@ -232,9 +254,9 @@ convertFeatures xys =
     in (xm,ym,zip xs' ys')
 
 
-train  :: (Ord a, Show a, Binary a) =>
-     (Token -> Models.Tok a, t)
-     -> [Conf -> Models.FeatureSpec a]
+train  :: 
+     (Token -> ROW, t)
+     -> [Conf -> FEATSPEC]
      -> [Flag]
      -> [FilePath]
      -> IO ()
@@ -275,18 +297,19 @@ train _fs _fspecs _flags _args = do
   error $ "GramLab.Morfette.Utils.train: " 
         ++ "Incorrect arguments to command train."
         
-toksToSentences :: (Token -> Models.Tok a) -> [Token] -> [[Models.Tok a]]
+toksToSentences :: (Token -> ROW) -> [Token] -> [[ROW]]
 toksToSentences f toks = map (map f)  $ splitWith isNullToken toks
 
-toksToForms :: [Token] -> [[Models.Tok a]]
-toksToForms toks =   map (map (\ t ->[ Str $ tokenForm t --, error "toksToForms", error "toksToForms"
-                                     , Embed (tokenEmbedding t) ]))
-                   . splitWith isNullToken 
-                   $ toks
-
-parseSents :: String -> [[Models.Tok a]]
-parseSents  = splitWith null . map (map Str) . map words . lines
-
+-- Transform list of tokens to list of sentences, where each sentence is a list of ROWs 
+-- (with empty output fields)
+toksToForms :: [Token] -> [[ROW]]
+toksToForms toks =   
+  [ [  Row { input = Input { inputForm = tokenForm tok ,
+                             inputEmb  = tokenEmb tok }
+           , output = [] } 
+       | tok <- sent ] 
+  | sent <-  splitWith isNullToken toks ]
+  
 getDict :: [Flag] -> Maybe (Set.Set String) -> IO Lexicon
 getDict flags tokSet = do
   case [f | DictFile f <- flags ] of
@@ -310,7 +333,7 @@ getToks flags mwes text =
             else id
     in map parseToken . f . Text.lines $ text
              
-
+-- TODO remove these if unnecessary
 formatTriple (form,lemma,pos) = unwords . map (padRight ' ' 12) $ [form,lemma,pos] 
 formatToken (f,ml,mp) = unwords [f,fromMaybe "" ml,fromMaybe "" mp]
 

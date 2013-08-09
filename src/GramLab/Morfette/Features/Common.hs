@@ -5,7 +5,7 @@ module GramLab.Morfette.Features.Common ( spellingSpec
                                         , mapSym
                                         , mapNum
                                         , getSome
-                                        , module GramLab.Morfette.Models
+                                        , module GramLab.Morfette.Models2
                                         , module GramLab.Morfette.Settings.Defaults
                                         , module GramLab.Morfette.LZipper
                                         , module GramLab.FeatureSet
@@ -22,7 +22,7 @@ import GramLab.Utils (padRight)
 import Data.Binary
 import Control.Monad (liftM,liftM2)
 import GramLab.Morfette.Settings.Defaults
-import GramLab.Morfette.Models
+import GramLab.Morfette.Models2
 import GramLab.Morfette.LZipper
 import GramLab.Morfette.Lang.Conf
 

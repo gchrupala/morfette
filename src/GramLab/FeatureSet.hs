@@ -51,6 +51,7 @@ listToFeatureSet = assocListToFeatureSet . Utils.index
  -> State (Table (Int, Maybe String)) [(Int, Double)] #-}
 realFeature k Null     = return []
 realFeature k (Sym s)  = intern (k,Just s)  >>= \i -> return $ [(i,1)]
+realFeature k (Num 0)  = return []
 realFeature k (Num n)  = intern (k,Nothing) >>= \i -> return $ [(i,n)]
 realFeature k (Set ss) = mapM intern (zip (repeat k) (map Just (Utils.uniq ss))) 
                          >>= \is -> return $ zip is (repeat 1)
