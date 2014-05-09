@@ -1,79 +1,38 @@
-defaults: all
+
+# Train Spanish model
+
+data/es/model: data/es/train.tokpos data/es/freeling-dict/dicc-2.0.src
+	morfette train --iter-pos 10 --iter-lemma 3 \
+                       --dict-file  data/es/freeling-dict/dicc-2.0.src \
+                       --language-conf es data/es/train.tokpos $@ +RTS -s -H2G
+
+# Eval Spanish model
+
+data/es/%.predict: data/es/model data/es/%.tokpos
+	cut -f1 -d' ' data/es/$*.tokpos | morfette predict data/es/model > $@
+
+%-es-eval: data/es/train.tokpos data/es/%.tokpos data/es/%.predict
+	morfette eval data/es/train.tokpos data/es/$*.tokpos data/es/$*.predict \
+                 --ignore-punctuation --ignore-case
+
+
+# Train French model
+
+data/fr/model: data/fr/ftb_1.tokpos data/fr/lexicon.ftb4.4morfette.csv
+	morfette train --iter-pos 10 --iter-lemma 2 \
+	               --dict-file data/fr/lexicon.ftb4.4morfette.csv \
+                       --language-conf fr data/fr/ftb_1.tokpos $@ +RTS -s -H2G
 
 
 
+# Eval French model 
+
+data/fr/%.predict: data/fr/model data/fr/%.tokpos
+	cut -f1 -d' ' data/fr/$*.tokpos | morfette predict data/fr/model > $@
+
+%-fr-eval: data/fr/ftb_1.tokpos data/fr/%.tokpos data/fr/%.predict
+	morfette eval data/fr/ftb_1.tokpos data/fr/$*.tokpos data/fr/$*.predict \
+                 --ignore-punctuation --ignore-case
 
 
-#program name
-MORFETTE=dist/build/morfette/morfette
-
-
-#parameters for training and eval
-# modify to suit your needs
-# for french TYPE can be either ftb4 or ftbmax
-
-TYPE=ftb4
-TRAINDATADIR=DATA/
-PREF=${TRAINDATADIR}/${TYPE}
-TRAINSET=${PREF}/ftb_1.pos.utf8.morpheteready
-DEVSET=${PREF}/ftb_2.pos.utf8.morpheteready
-GOLDSET=${PREF}/ftb_3.pos.utf8.morpheteready
-
-LEXICON=${TRAINDATADIR}/lexicon/lexicon.ftb4.4morfette.csv
-ITERPOS=10
-ITERLEMMA=3
-MODELNAME=${PREF}/${TYPE}.${ITERPOS}x${ITERLEMMA}.model
-
-all: configure build
-		
-	
-check: train eval_dev
-
-
-
-# note that if you want to install in your own home directory
-# add a --prefix=DIRTOINSTALL  option right after the --user
-# as in 
-# runghc Setup.lhs configure --user --prefix=/home/foo/bar
-# the install target will then install the morfette compiled binary
-# in /home/foo/bar/bin  (bin must exist)
-
-configure:
-	runghc Setup.lhs configure --user
-
-
-build: configure
-	runghc Setup.lhs build
-	
-install: configure build
-	runghc Setup.lhs install
-	
-	
-install_home:
-                                                                                                                                                          	
-	
-clean:
-	runghc Setup.lhs clean
- 
-
-
-
-
-train:
-	${MORFETTE} train --iter-pos=${ITERPOS} --iter-lemma=${ITERLEMMA} \
-	${TRAINSET} ${MODELNAME} \
-	--dict=${LEXICON} +RTS -K100m -sstderr
-	
-	
-eval_dev:
-	#${MORFETTE} predict  ${MODELNAME} < ${DEVSET} > ${DEVSET}.tagged
-	${MORFETTE}  eval --ignore-case /dev/null ${DEVSET} ${DEVSET}.tagged |\
-	tee ${DEVSET}.tagged.result.${TYPE}.${ITERPOS}x${ITERLEMMA}.model
-	
-	
-
-eval_gold:
-	${MORFETTE} predict  ${MODELNAME} < ${GOLDSET} > ${GOLDSET}.tagged
-	${MORFETTE}  eval --ignore-case ${TRAINSET} ${GOLDSET} ${GOLDSET}.tagged |\
-	tee ${GOLDSET}.tagged.result.${TYPE}.${ITERPOS}x${ITERLEMMA}.model
-	
+.PHONY: devel-es-eval ftb_2-fr-eval

@@ -1,4 +1,5 @@
-=INTRODUCTION=
+INTRODUCTION
+============
 
 Morfette website: http://sites.google.com/site/morfetteweb/
 
@@ -23,28 +24,42 @@ The current version of Morfette uses an averaged perceptron to
 fit the models, rather than Maximum Entropy training. The lemmatization 
 classes are Edit-Tree-based as described in (Chrupala 2008).
 
-=LICENSE= 
+LICENSE
+=======
+
 The source code in the src directory is licensed under
 the BSD license.
 
-=INSTALLATION=
+INSTALLATION
+============
+
 Pre-built binaries are available from the project website. 
 If they don't work on your system you will
 need to build from source, using the GHC Haskell compiler. Build
 instructions are in [INSTALL]
 
-=USAGE=
+USAGE
+=====
+
 Usage: morfette command [OPTION...] [ARG...]
 train:    train models
 train [OPTION...] TRAIN-FILE MODEL-DIR 
     --dict-file=PATH                      path to optional dictionary
     --language-configuration=es|pl|tr|..  language configuration
-    --class-entropy-prune-threshold=NUM   class prune threshold
+    --iter-pos=NUM                        iterations for POS model
+    --iter-lemma=NUM                      iterations for Lemma model
+
+extract-features:
+          extract features
+extract-features [OPTION...] MODEL-DIR 
+    --dict-file=PATH      path to optional dictionary
+    --model-id=pos|lemma  model id (`pos' or `lemma')
 
 predict:  predict postags and lemmas using saved model data
 predict [OPTION...] MODEL-DIR 
-    --beam=+INT  beam size to use
-    --tokenize   tokenize input
+    --beam=+INT   beam size to use
+    --tokenize    tokenize input
+    --multi=+INT  n-best output
 
 eval:     evaluate morpho-tagging and lemmatization results
 eval [OPTION...] TRAIN-FILE GOLD-FILE TEST-FILE 
@@ -54,15 +69,21 @@ eval [OPTION...] TRAIN-FILE GOLD-FILE TEST-FILE
     --ignore-punctuation     ignore punctuation for evaluation
     --ignore-pos=POS-prefix  ignore POS starting with POS-prefix for evaluation
 
+version:  show version
+version [OPTION...] 
 
-=EXAMPLE USAGE=
+EXAMPLE USAGE
+=============
+
 To train a new model:
-morfette train --dict-file=DICT TRAINING-FILE MODEL-DIR +RTS -K100m
+morfette train --dict-file=DICT TRAINING-FILE MODEL-DIR 
 
 To use the model in MODEL-DIR to analyze new data:
 morfette predict MODEL-DIR < TEST-DATA > ANALYZED-TEST-DATA
 
-=DATA FORMAT=
+DATA FORMAT
+===========
+
 Morfette expects both training and testing data to be tokenized and
 split into sentences. The format of training data look like this:
 
@@ -105,13 +126,19 @@ la
 misma
 
 
-=References=
-[1] Grzegorz Chrupala, Georgiana Dinu and Josef van Genabith. 2008.
+References
+==========
+
+[1] Grzegorz Chrupała, Georgiana Dinu and Josef van Genabith. 2008.
     Learning Morphology with Morfette. In Proceedings of LREC 2008.
     http://www.lrec-conf.org/proceedings/lrec2008/pdf/594_paper.pdf
 
-[2] Grzegorz Chrupala. 2008. Towards a Machine-Learning Architecture
+[2] Grzegorz Chrupała. 2008. Towards a Machine-Learning Architecture
     for Lexical Functional Grammar Parsing. Chapter 6. PhD
     dissertation, Dublin City
     University. 
-    http://www.lsv.uni-saarland.de/personalPages/gchrupala/papers/phd.pdf
+    http://grzegorz.chrupala.me/papers/phd.pdf
+
+[3] Grzegorz Chrupała. 2010. Efficient induction of probabilistic word
+    classes with LDA. IJCNLP. 
+    http://grzegorz.chrupala.me/papers/ijcnlp-2011.pdf
