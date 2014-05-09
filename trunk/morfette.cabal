@@ -17,15 +17,6 @@ cabal-version: >= 1.2
 Data-dir:    data
 Data-files:  es/model/conf.model, es/model/models.model, es/model/mwe.model,
              fr/model/conf.model, fr/model/models.model, fr/model/mwe.model
-             
-
-Executable     morfette
-  hs-source-dirs: src
-  Main-Is:        Main.hs
-  Other-Modules:  GramLab.Commands, GramLab.Morfette.LZipper, 
-                  GramLab.Data.StringLike,
-                  GramLab.Data.CommonSubstrings, GramLab.Data.Diff.EditTree, 
-
 
 Executable     morfette
   hs-source-dirs: src
