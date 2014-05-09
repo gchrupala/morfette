@@ -1,12 +1,12 @@
 INTRODUCTION
 ============
 
-Morfette website: http://sites.google.com/site/morfetteweb/
+Morfette website: https://code.google.com/p/morfette/
 
 Morfette is a tool for supervised learning of inflectional
 morphology. Given a corpus of sentences annotated with lemmas 
 and morphological labels, and optionally a lexicon, morfette 
-learns how to morphologically analyse new sentences. 
+learns how to morphologically analyze new sentences. 
 
 In the learning stage Morfette fits two separate logistic regression
 models: one for morphological tagging and one for lemmatization. The
@@ -19,10 +19,10 @@ a lemmatization class corresponds to the specification of the edit
 operations which are needed to transform the inflected word form into
 the corresponding lemma.
 
-The basic approach is described in (Chrupala et al 2008 and Chrupala 2008). 
+The basic approach is described in (Chrupała et al 2008 and Chrupała 2008). 
 The current version of Morfette uses an averaged perceptron to 
 fit the models, rather than Maximum Entropy training. The lemmatization 
-classes are Edit-Tree-based as described in (Chrupala 2008).
+classes are Edit-Tree-based as described in (Chrupała 2008).
 
 LICENSE
 =======
@@ -33,10 +33,24 @@ the BSD license.
 INSTALLATION
 ============
 
-Pre-built binaries are available from the project website. 
-If they don't work on your system you will
-need to build from source, using the GHC Haskell compiler. Build
-instructions are in [INSTALL]
+The easiest way to install Morfette is to first install the Haskell
+Platform <http://www.haskell.org/platform/> then execute the following
+commands from within the morfette directory:
+
+> cabal update
+> cabal install --bindir=$HOME/bin
+
+This will compile Morfette and install the executable in $HOME/bin. 
+
+Cabal can also download Morfette from the source code repository
+Hackage:
+
+> cabal install morfette --bindir=$HOME/bin --datadir=$HOME/share
+
+This will download Morfette, compile it, install the executable in
+$HOME/bin, and install the data files in a $HOME/share.
+
+There are also pre-built binaries available from the project website. 
 
 USAGE
 =====
@@ -76,10 +90,21 @@ EXAMPLE USAGE
 =============
 
 To train a new model:
-morfette train --dict-file=DICT TRAINING-FILE MODEL-DIR 
+
+> morfette train --dict-file=DICT TRAINING-FILE MODEL-DIR 
 
 To use the model in MODEL-DIR to analyze new data:
-morfette predict MODEL-DIR < TEST-DATA > ANALYZED-TEST-DATA
+
+> morfette predict MODEL-DIR < TEST-DATA > ANALYZED-TEST-DATA
+
+PRETRAINED MODELS
+=================
+
+Pretrained models for Spanish and French are available in the data
+directory: data/es/model and data/fr/model. For example you can use
+the Spanish model like this:
+
+> morfette predict data/es/model < TEST-DATA > ANALYZER-TEST-DATA
 
 DATA FORMAT
 ===========
@@ -124,6 +149,22 @@ propuesta
 será
 la
 misma
+
+Optionally, Morfette can also use vector representations of words for
+training and prediction, in addition to character strings, as
+described in [3]. In this case, the second column of is used for the
+vectors. Inside this field vector components are separated by commas:
+
+Gómez 0.1,0.0,0.9 Gómez np0000p
+sostiene 0.0,0.0,0.2 sostener vmip3s0
+
+For prediction the format is similar, but only the first two columns
+are used:
+
+Gómez 0.1,0.0,0.9
+sostiene 0.0,0.0,0.2
+
+Each vector should have the same number of components.
 
 
 References
