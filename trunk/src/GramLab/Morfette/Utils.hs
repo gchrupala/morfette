@@ -101,9 +101,10 @@ commands fs fspecs = [
                           , Option [] ["iter-lemma"] 
                                        (ReqArg (IterLemma . read) "NUM")
                                        "iterations for Lemma model"
-                          , Option [] ["cluster-file"]
+                        {-  , Option [] ["cluster-file"]
                                        (ReqArg ClusterFile "PATH")
                                         "path to optional cluster file"
+                        -}
                           ] 
               [ "TRAIN-FILE", "MODEL-DIR" ])
            , ("extract-features", CommandSpec (extractFeatures fs fspecs)
