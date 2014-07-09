@@ -35,7 +35,8 @@ data FeatureSpec t a =
     FS { label    :: Row t a -> a
        , features :: LZipper (Row t a) (Row t a) (Row t a) -> [Feature String Double] 
        , preprune :: ProbDist a -> ProbDist a
-       , check    :: LZipper (Row t a) (Row t a) (Row t a) -> a -> Bool 
+       , check    :: LZipper (Row t a) (Row t a) (Row t a) -> a -> Bool
+       , pruneUniqLabels :: Bool
        , trainSettings :: M.TrainSettings }
     
     
@@ -96,14 +97,20 @@ train :: (Ord a,Show a) =>
       -> [M.Model a Int String Double]
 train fspecs sents = 
   flip map fspecs
-           $ \fs ->  let yxs = concatMap (sentToExamples fs) $ sents
-                         ys  = uniq . map fst $ yxs
-                         zs  = concat [ take (length s) 
+           $ \fs ->  let yxs_all = concatMap (sentToExamples fs) $ sents
+                         zs_all  = concat [ take (length s) 
                                         . iterate slide 
                                         . fromList
                                         $ s 
                                         | s <- sents ]
-                         yss = [ [ y | y <- ys , check fs z y ] 
+                         ys  = (if pruneUniqLabels fs then Map.filter (>1) else id)
+                               . Map.fromListWith (+)
+                               . map (\ (y, _) -> (y, 1))
+                               $ yxs_all
+                         (yxs, zs) = unzip
+                                     . filter (flip Map.member ys . fst . fst)
+                                     $ zip yxs_all zs_all  
+                         yss = [ [ y | y <- Map.keys ys , check fs z y ] 
                                  | z <- zs ]
                      in M.train (trainSettings fs) yss yxs
 
