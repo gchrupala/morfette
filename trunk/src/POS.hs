@@ -11,7 +11,8 @@ import qualified Data.Vector.Unboxed as U
 featureSpec global = FS { label    = theLabel
                         , features = theFeatures global
                         , preprune = mkPreprune 0.3
-                        , check    = \_ _ -> True 
+                        , check    = \_ _ -> True
+                        , pruneUniqLabels = False 
                         , trainSettings = posTrainSettings }
 
 leftCtx   = 2

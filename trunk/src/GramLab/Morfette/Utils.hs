@@ -64,6 +64,7 @@ data Flag = ModelPrefix String
           | IterPOS Int
           | IterLemma Int
           | ModelId String
+          | PruneUniqLabels
           deriving Eq
 
 data Input  = Input { inputForm :: !String, inputEmb :: !(Maybe Emb) }
@@ -101,6 +102,9 @@ commands fs fspecs = [
                           , Option [] ["iter-lemma"] 
                                        (ReqArg (IterLemma . read) "NUM")
                                        "iterations for Lemma model"
+                          , Option [] ["prune-unique-labels"] 
+                                      (NoArg PruneUniqLabels)
+                                       "discard labels occurring only once"
                         {-  , Option [] ["cluster-file"]
                                        (ReqArg ClusterFile "PATH")
                                         "path to optional cluster file"
@@ -279,7 +283,7 @@ train (prepr,_) fspecs flags [dat,modeldir] = do
               [f] -> f 
       i_l = case [f | IterLemma f <- flags ] of  
               [] ->  M.iter lemmaTrainSettings 
-              [f] -> f 
+              [f] -> f
       sentences = toksToSentences prepr toks
   createDirectoryIfMissing True modeldir
   let models = Models.train (map (\(i,fs) -> 
@@ -288,7 +292,9 @@ train (prepr,_) fspecs flags [dat,modeldir] = do
                                       in fs' { Models.trainSettings = 
                                                    ts { M.entropyTh = g 
                                                       , M.iter = i
-                                                      } })
+                                                      }
+                                             , Models.pruneUniqLabels = PruneUniqLabels `elem` flags
+                                               })
                              $ zip [i_p,i_l] fspecs) 
             $ sentences
   B.writeFile (modelFile modeldir) (encode models)

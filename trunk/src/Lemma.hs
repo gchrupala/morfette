@@ -11,7 +11,8 @@ import Data.Maybe (fromMaybe)
 featureSpec global  = FS { label    = theLabel
                          , features = theFeatures  global
                          , preprune = mkPreprune 0.3
-                         , check    = theCheck 
+                         , check    = theCheck
+                         , pruneUniqLabels = False 
                          , trainSettings = lemmaTrainSettings }
 
 theCheck :: LZipper ROW ROW ROW -> Output -> Bool
