@@ -20,7 +20,6 @@ import Data.Maybe
 import Data.Ord (comparing)
 
 data Feature sym num = Sym sym
-                     | SymR sym num
                      | Set [sym]
                      | Num num
                      | Null
@@ -52,7 +51,6 @@ listToFeatureSet = assocListToFeatureSet . Utils.index
  -> State (Table (Int, Maybe String)) [(Int, Double)] #-}
 realFeature k Null     = return []
 realFeature k (Sym s)  = intern (k,Just s)  >>= \i -> return $ [(i,1)]
-realFeature k (SymR i n) = intern (k, Just i) >>= \i -> return $ [(i,n)]
 realFeature k (Num 0)  = return []
 realFeature k (Num n)  = intern (k,Nothing) >>= \i -> return $ [(i,n)]
 realFeature k (Set ss) = mapM intern (zip (repeat k) (map Just (Utils.uniq ss))) 
