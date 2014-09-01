@@ -7,6 +7,7 @@ import GramLab.Morfette.Models2 (Row(..))
 import GramLab.Morfette.Utils (ROW, Input(..), Output(..))
 import Debug.Trace
 import Data.Maybe (fromMaybe)
+import qualified Data.Vector.Unboxed as U
 
 featureSpec global  = FS { label    = theLabel
                          , features = theFeatures  global
@@ -43,7 +44,7 @@ theFeatures  ::    Conf
                 -> LZipper ROW ROW ROW
                 -> [Feature String Double]
 theFeatures  global tic = focusFeatures  (focus tic)
-    where focusFeatures (Just (Row { input = Input { inputForm = form } 
+    where focusFeatures (Just (Row { input = Input { inputForm = form , inputEmb = mv } 
                                    , output = (POS label:_) })) = 
             [ Sym $ low form, Sym $ label
             , Sym $ spellingSpec form
@@ -52,12 +53,15 @@ theFeatures  global tic = focusFeatures  (focus tic)
             ]
             ++ prefixes maxPrefix (low form)
             ++ suffixes maxSuffix (low form)
+            ++ embedding mv
           focusFeatures other = error $ "Lemma.theFeatures: " ++ show other
           low = lowercase
           lexmap w = Set $ map (show . make w . fst) $ Map.findWithDefault [] w (dictLex global)
           cluster w  = case Map.lookup w (clusterDict global) of
                           Nothing -> Null
                           Just c  -> Sym c
+          embedding Nothing  = []
+          embedding (Just v) = [ SymR (show i) n | (i, n) <- U.toList v ]
 
 decode str = case reads str of
                [(s,"")] -> s

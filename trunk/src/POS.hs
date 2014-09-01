@@ -63,5 +63,5 @@ theFeatures global tic = let prev = getSome  leftCtx   (left tic)
           getpos Nothing = ""
           getpos (Just (Row { output = (POS label:_) })) = head (splitPOS (lang global) label)
           embedding Nothing  = []
-          embedding (Just v) = [ Num n | n <- U.toList v ]
+          embedding (Just v) = [ SymR (show i) n | (i, n) <- U.toList v ]
 

@@ -22,7 +22,7 @@ import qualified Data.Text.Lazy as Text
 import qualified Data.Text.Lazy.Read as Text
 
 
-type Emb = U.Vector Double
+type Emb = U.Vector (Int, Double)
 
 data Token      = Token { tokenForm :: String
                         , tokenEmb :: Maybe Emb
@@ -55,11 +55,35 @@ parseToken line =
 nullToken = token "" Nothing Nothing Nothing 
 isNullToken t = t == nullToken
 
-parseEmb :: Text.Text -> Emb
-parseEmb = U.fromList 
+-- Embeddings can be in dense format or sparse format
+-- dense:  0.1,0.2,0.5
+-- sparse: 1:0.1,2:0.5
+
+parseEmb :: Text.Text -> Emb 
+parseEmb x = case Text.splitOn "," x of
+  y:_ -> case Text.splitOn ":" y of
+    [_,_] -> parseEmbSparse x
+    _ -> parseEmbDense x
+  _ -> error "GramLab.Morfette.Token.parseEmb: parse error"
+
+parseEmbDense :: Text.Text -> Emb
+parseEmbDense = U.fromList 
+           . zip [0..]
            . map readDouble 
            . filter (not . Text.null)
            . Text.splitOn ","
+
+parseEmbSparse :: Text.Text -> Emb
+parseEmbSparse = U.fromList
+                 . map parsePair
+                 . filter (not . Text.null)
+                 . Text.splitOn ","
+                 
+parsePair :: Text.Text -> (Int, Double)                 
+parsePair x =
+  case Text.splitOn ":" x of
+    [f1, f2] -> (readInt f1, readDouble f2)
+    _ -> error $ "GramLab.Morfette.Token.parsePair: parse error"
 
 readDouble :: Text.Text -> Double
 readDouble s = 
@@ -68,6 +92,13 @@ readDouble s =
     Left e        -> error $ "GramLab.Morfette.Token.readDouble: " ++ show e
     _             -> error $ "GramLab.Morfette.Token.readDouble: parse error"
 
+readInt :: Text.Text -> Int
+readInt s = 
+  case Text.decimal s of 
+    Right (d, "") -> d
+    Left e -> error $ "GramLab.Morfette.Token.readInt: " ++ show e
+    _      -> error $ "GramLab.Morfette.Token.readInt: parse error"
+    
 lowercaseToken :: Token -> Token
 lowercaseToken t = token (lowercase (tokenForm t)) 
                          (tokenEmb t) 
