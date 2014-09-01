@@ -8,6 +8,8 @@ import GramLab.Morfette.Utils (ROW, Input(..), Output(..))
 import Debug.Trace
 import Data.Maybe (fromMaybe)
 import qualified Data.Vector.Unboxed as U
+import Data.Ord 
+import Data.List
 
 featureSpec global  = FS { label    = theLabel
                          , features = theFeatures  global
@@ -53,7 +55,7 @@ theFeatures  global tic = focusFeatures  (focus tic)
             ]
             ++ prefixes maxPrefix (low form)
             ++ suffixes maxSuffix (low form)
-            ++ embedding mv
+            ++ embedding mv 
           focusFeatures other = error $ "Lemma.theFeatures: " ++ show other
           low = lowercase
           lexmap w = Set $ map (show . make w . fst) $ Map.findWithDefault [] w (dictLex global)
@@ -61,8 +63,19 @@ theFeatures  global tic = focusFeatures  (focus tic)
                           Nothing -> Null
                           Just c  -> Sym c
           embedding Nothing  = []
-          embedding (Just v) = [ SymR (show i) n | (i, n) <- U.toList v ]
-
+          embedding (Just v) = [ Num $ if abs n < 0.2 then 0 else n | n <- U.toList v ]
+{-          
+          embedding (Just v) = let izs = take 10 
+                                         . sortBy (flip $ comparing snd) 
+                                         . zip [0..] 
+                                         . U.toList 
+                                         $ v 
+                               in [ Sym $ if n > 0.5 
+                                          then show i ++ "=True" 
+                                          else show i ++ "=False" 
+                                  | (i,n) <- izs ]
+        
+-}
 decode str = case reads str of
                [(s,"")] -> s
                other    -> error ("Lemma.decode: no parse: " ++ str)
