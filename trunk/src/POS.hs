@@ -7,6 +7,8 @@ import GramLab.Morfette.Models2 (Row(..))
 import qualified Data.Map as Map
 import Lemma (apply)
 import qualified Data.Vector.Unboxed as U
+import Data.Ord 
+import Data.List
 
 featureSpec global = FS { label    = theLabel
                         , features = theFeatures global
@@ -63,5 +65,16 @@ theFeatures global tic = let prev = getSome  leftCtx   (left tic)
           getpos Nothing = ""
           getpos (Just (Row { output = (POS label:_) })) = head (splitPOS (lang global) label)
           embedding Nothing  = []
-          embedding (Just v) = [ SymR (show i) n | (i, n) <- U.toList v ]
-
+          embedding (Just v) = [ Num $ if abs n < 0.2 then 0 else n | n <- U.toList v ]
+{-
+          
+          embedding (Just v) = let izs = take 10 
+                                         . sortBy (flip $ comparing snd) 
+                                         . zip [0..] 
+                                         . U.toList 
+                                         $ v 
+                               in [ Sym $ if n > 0.5 
+                                          then show i ++ "=True" 
+                                          else show i ++ "=False" 
+                                  | (i,n) <- izs ]
+-}
