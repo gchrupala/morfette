@@ -167,6 +167,20 @@ sostiene 0.0,0.0,0.2
 Each vector should have the same number of components.
 
 
+Additionally, Morfette can use a dictionary with mappings between
+word-forms, lemmas and morphological tags. The tags do NOT need to be
+of the same kind and the tags used in the training data.  The format
+of the dictionary file is one record per line with the following
+fields:
+
+FORM LEMMA1 POS1 LEMMA2 POS2 ...
+
+Example from the Spanish dictionary:
+
+sientes sentar VMSP2S0 sentir VMIP2S0
+siento sentar VMIP1S0 sentir VMIP1S0
+
+
 References
 ==========
 
